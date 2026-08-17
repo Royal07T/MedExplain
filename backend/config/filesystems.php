@@ -38,6 +38,24 @@ return [
             'report' => false,
         ],
 
+        /*
+        |--------------------------------------------------------------------------
+        | Documents Disk
+        |--------------------------------------------------------------------------
+        |
+        | Private storage for uploaded medical documents. Documents are never
+        | publicly addressable. Swap the driver to "s3" (with the configured
+        | AWS keys) for S3-compatible object storage in production.
+        |
+        */
+
+        'documents' => [
+            'driver' => 'local',
+            'root' => storage_path('app/private/documents'),
+            'throw' => false,
+            'report' => false,
+        ],
+
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
