@@ -2,10 +2,12 @@
 
 namespace Tests\Feature\Documents;
 
+use App\Jobs\ProcessMedicalDocumentJob;
 use App\Models\MedicalDocument;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -16,6 +18,7 @@ class DocumentUploadTest extends TestCase
 
     public function test_authenticated_user_can_upload_a_document(): void
     {
+        Queue::fake();
         Storage::fake('documents');
 
         $user = User::factory()->create();
@@ -42,6 +45,8 @@ class DocumentUploadTest extends TestCase
         Storage::disk('documents')->assertExists($path);
 
         $this->assertDatabaseHas('audit_logs', ['action' => 'document_uploaded']);
+
+        Queue::assertPushed(ProcessMedicalDocumentJob::class);
     }
 
     public function test_upload_requires_authentication(): void

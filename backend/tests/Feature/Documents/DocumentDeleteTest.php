@@ -6,6 +6,7 @@ use App\Models\MedicalDocument;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -16,6 +17,7 @@ class DocumentDeleteTest extends TestCase
 
     public function test_owner_can_delete_document_and_stored_file(): void
     {
+        Queue::fake();
         Storage::fake('documents');
 
         $user = User::factory()->create();

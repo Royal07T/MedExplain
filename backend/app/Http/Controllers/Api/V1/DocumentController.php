@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UploadDocumentRequest;
+use App\Http\Resources\AnalysisResource;
 use App\Http\Resources\DocumentResource;
 use App\Models\MedicalDocument;
 use App\Services\DocumentService;
@@ -45,6 +46,24 @@ final class DocumentController extends Controller
         $this->documentService->recordView($request->user(), $document);
 
         return response()->json(new DocumentResource($document));
+    }
+
+    /**
+     * Show the AI analysis for a document the user owns.
+     */
+    public function analysis(Request $request, MedicalDocument $document): JsonResponse
+    {
+        $this->authorize('view', $document);
+
+        $analysis = $this->documentService->getAnalysis($document);
+
+        if ($analysis === null) {
+            return response()->json([
+                'message' => 'No analysis is available for this document yet.',
+            ], 404);
+        }
+
+        return response()->json(new AnalysisResource($analysis));
     }
 
     /**

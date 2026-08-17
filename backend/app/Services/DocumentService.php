@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Enums\AuditEvent;
 use App\Enums\DocumentStatus;
 use App\Enums\DocumentType;
+use App\Jobs\ProcessMedicalDocumentJob;
+use App\Models\AiAnalysis;
 use App\Models\MedicalDocument;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
@@ -35,6 +37,8 @@ final class DocumentService
         ]);
 
         $this->auditService->record(AuditEvent::DocumentUploaded, $user, $document);
+
+        ProcessMedicalDocumentJob::dispatch($document->id);
 
         return $document;
     }
@@ -68,5 +72,18 @@ final class DocumentService
         $document->delete();
 
         $this->auditService->record(AuditEvent::DocumentDeleted, $user, $document);
+    }
+
+    /**
+     * Load the analysis (with items and lab results) for a document, if any.
+     */
+    public function getAnalysis(MedicalDocument $document): ?AiAnalysis
+    {
+        return $document->analysis()
+            ->with([
+                'items',
+                'medicalDocument.extraction.labResults',
+            ])
+            ->first();
     }
 }

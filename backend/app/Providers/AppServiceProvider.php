@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Services\FastApiClient;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -14,7 +15,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(FastApiClient::class, fn (): FastApiClient => FastApiClient::fromConfig());
     }
 
     /**

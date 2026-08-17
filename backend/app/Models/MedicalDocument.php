@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable([
     'user_id',
@@ -46,5 +47,21 @@ class MedicalDocument extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * The extraction produced for this document.
+     */
+    public function extraction(): HasOne
+    {
+        return $this->hasOne(DocumentExtraction::class);
+    }
+
+    /**
+     * The AI analysis produced for this document.
+     */
+    public function analysis(): HasOne
+    {
+        return $this->hasOne(AiAnalysis::class);
     }
 }

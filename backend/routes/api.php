@@ -38,6 +38,7 @@ Route::prefix('v1')->group(function (): void {
         Route::middleware('throttle:api')->group(function (): void {
             Route::get('documents', [DocumentController::class, 'index']);
             Route::get('documents/{document}', [DocumentController::class, 'show']);
+            Route::get('documents/{document}/analysis', [DocumentController::class, 'analysis']);
             Route::delete('documents/{document}', [DocumentController::class, 'destroy']);
         });
 
