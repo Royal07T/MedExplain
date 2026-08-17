@@ -95,7 +95,7 @@ class StubProvider(LLMProvider):
 def get_llm_provider() -> LLMProvider:
     settings = get_settings()
     name = settings.llm_provider.strip().lower()
-    if name == "openai":
+    if name in ("openai", "openrouter", "agentrouter"):
         if not settings.openai_api_key:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -103,5 +103,9 @@ def get_llm_provider() -> LLMProvider:
             )
         from app.services.llm.openai_provider import OpenAIProvider
 
-        return OpenAIProvider(api_key=settings.openai_api_key, model=settings.openai_model)
+        return OpenAIProvider(
+            api_key=settings.openai_api_key,
+            model=settings.openai_model,
+            base_url=settings.openai_base_url,
+        )
     return StubProvider()

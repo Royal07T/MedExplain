@@ -24,9 +24,10 @@ _RAW_TEXT_LIMIT = 4000
 
 
 class OpenAIProvider(LLMProvider):
-    def __init__(self, api_key: str, model: str, timeout: float = 30.0):
+    def __init__(self, api_key: str, model: str, base_url: str = "https://api.openai.com/v1", timeout: float = 30.0):
         self._api_key = api_key
         self._model = model
+        self._base_url = base_url.rstrip("/")
         self._timeout = timeout
 
     async def explain(
@@ -47,7 +48,7 @@ class OpenAIProvider(LLMProvider):
         headers = {"Authorization": f"Bearer {self._api_key}"}
         async with httpx.AsyncClient(timeout=self._timeout) as client:
             response = await client.post(
-                "https://api.openai.com/v1/chat/completions",
+                f"{self._base_url}/chat/completions",
                 json=payload,
                 headers=headers,
             )

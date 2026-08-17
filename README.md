@@ -79,7 +79,11 @@ pytest                        # 32 tests
 Set `FASTAPI_BASE_URL=http://127.0.0.1:8001` and a shared
 `FASTAPI_API_KEY` in `backend/.env`. The AI service defaults to a
 deterministic `stub` LLM provider (no API key required); set
-`LLM_PROVIDER=openai` + `OPENAI_API_KEY` to use the real provider.
+`LLM_PROVIDER=openai` + `OPENAI_API_KEY` to use the real provider. The
+OpenAI provider is endpoint-agnostic: point `OPENAI_BASE_URL` at any
+OpenAI-compatible gateway (default `https://api.openai.com/v1`, or e.g.
+`https://openrouter.ai/api/v1`) and set `OPENAI_MODEL` to that gateway's
+model id.
 
 ### 3. Frontend
 
@@ -140,6 +144,8 @@ Key variables (full list in `.env.example`):
 | `FASTAPI_API_KEY` | `dev-secret-change-me` | **Change in production** |
 | `LLM_PROVIDER` | `stub` | `stub` or `openai` |
 | `OPENAI_API_KEY` | *(empty)* | Required when `LLM_PROVIDER=openai` |
+| `OPENAI_MODEL` | `gpt-4o-mini` | Model id (OpenRouter/AgentRouter models also work) |
+| `OPENAI_BASE_URL` | `https://api.openai.com/v1` | OpenAI-compatible endpoint, e.g. `https://openrouter.ai/api/v1` |
 | `MAIL_MAILER` | `log` | Set to `smtp` for real email |
 | `APP_PORT` | `80` | Host port exposed by nginx |
 
