@@ -55,7 +55,9 @@ Statuses are stored as string enums:
 - `ai_analyses.status`: `pending | completed | failed`
 
 Implemented in Milestone 1: `users` (Laravel default), `profiles`, `audit_logs`,
-`personal_access_tokens`, and the framework tables.
+`personal_access_tokens`, and the framework tables. `medical_documents` was added in
+Milestone 2. The remaining tables (`document_extractions`, `lab_results`, `ai_analyses`,
+`analysis_items`) land with the processing pipeline in Milestone 4.
 
 ## Laravel ↔ FastAPI contract (Milestone 3)
 
@@ -91,6 +93,35 @@ FastAPI extract/OCR → parse lab tests → store `document_extractions` + `lab_
 FastAPI explain → store `ai_analyses` + `analysis_items` → `status=processed`.
 Failures mark the document `failed` with a safe technical message; stack traces never
 reach the patient.
+
+## Milestones & roadmap
+
+Build order for the MVP. Each milestone is implemented, verified (tests + live smoke
+test), and committed before the next begins.
+
+| # | Milestone | Delivers | Status |
+|---|-----------|----------|--------|
+| 1 | Foundation + Laravel authentication | Monorepo, Laravel scaffold, envs, `users`/`profiles`/`audit_logs` schema, Sanctum auth API (register/login/logout/verification/password reset), rate limiting, tests | ✅ Done |
+| 2 | Medical document upload & storage | `medical_documents` schema, model, policy, controller, private `documents` disk, upload validation (MIME/size), list/view/delete, audit events, tests | ✅ Done |
+| 3 | FastAPI service | FastAPI scaffold, `GET /health`, `POST /documents/extract`, `POST /documents/parse-lab-report`, `POST /analysis/explain`, Pydantic schemas, text extraction / OCR, lab parsing, LLM provider abstraction, tests | ⏳ Planned |
+| 4 | Processing pipeline | `ProcessMedicalDocumentJob`, `FastApiClient`, persistence of `document_extractions`/`lab_results`/`ai_analyses`/`analysis_items`, status transitions, retries, safe failure handling | ⏳ Planned |
+| 5 | Vue 3 frontend | SPA foundation (router guards, Pinia, axios, layout), auth pages, dashboard, upload flow, report/results UI, status badges, loading/error/empty states, disclaimer | ⏳ Planned |
+| 6 | Hardening, docs & Docker | Audit wiring polish, rate-limit review, full README, `docker-compose.yml` (frontend, Laravel, FastAPI, PostgreSQL, Redis), full-stack tests | ⏳ Planned |
+
+Suggested commit sequence (used so far, to be continued):
+
+```
+feat: initialize Laravel backend              ✅ 4d39d67
+feat: add authentication                      ✅ 56be490
+feat: add medical document uploads            ✅ 6c299f0
+feat: initialize FastAPI service              ⏳
+feat: add laboratory report extraction        ⏳
+feat: add AI analysis                         ⏳
+feat: add Vue dashboard                       ⏳
+feat: add report analysis UI                  ⏳
+test: add document processing tests           ⏳
+docs: add project documentation               ⏳
+```
 
 ## Security & safety principles
 
