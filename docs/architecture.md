@@ -123,6 +123,181 @@ test: add document processing tests           ⏳
 docs: add project documentation               ⏳
 ```
 
+### Milestone 3 — FastAPI service (`ai-service/`)
+
+**Scope**: Standalone FastAPI service: service-to-service auth, document text extraction,
+OCR fallback, laboratory-report parsing, LLM provider abstraction, Pydantic v2 schemas,
+tests. Stateless — no DB, no user model.
+
+**Files**
+
+```
+ai-service/
+├── pyproject.toml            # fastapi, uvicorn, pydantic-settings, python-multipart,
+│                             # pypdf, Pillow, pytesseract (optional)
+├── .env.example              # FASTAPI_API_KEY, LLM_PROVIDER, OPENAI_API_KEY, ...
+├── app/
+│   ├── main.py               # app factory + lifespan
+│   ├── core/
+│   │   ├── config.py         # pydantic-settings Settings (env-driven)
+│   │   └── security.py       # X-Service-Key dependency
+│   ├── api/v1/
+│   │   ├── router.py         # versioned router
+│   │   ├── health.py         # GET /api/v1/health
+│   │   ├── documents.py      # POST /api/v1/documents/extract,
+│   │   │                     #     POST /api/v1/documents/parse-lab-report
+│   │   └── analysis.py       # POST /api/v1/analysis/explain
+│   ├── schemas/
+│   │   ├── extraction.py     # LabTest, ExtractionResponse, DocumentType
+│   │   └── analysis.py       # AiAnalysis, AnalysisItem
+│   └── services/
+│       ├── extraction/
+│       │   ├── text_extractor.py   # pypdf for PDFs with a text layer
+│       │   ├── ocr.py              # pytesseract for images / text-less PDFs
+│       │   └── lab_parser.py       # regex + LLM-assisted parsing into LabTest[]
+│       └── llm/
+│           ├── base.py             # LLMProvider protocol
+│           ├── factory.py          # provider selection via LLM_PROVIDER env
+│           └── openai_provider.py  # structured JSON output
+└── tests/
+    ├── test_health.py
+    ├── test_schemas.py
+    ├── test_extraction.py
+    └── test_analysis.py
+```
+
+**Key decisions**
+
+- Auth via `X-Service-Key` header, constant-time compare (`secrets.compare_digest`).
+- OCR path only when a PDF has no extractable text layer; Tesseract is an optional
+  system dependency — when unavailable, report `extraction_method=pdf_text` gaps
+  gracefully instead of failing.
+- LLM access through an `LLMProvider` protocol + factory with a built-in `stub`
+  provider, so tests and keyless dev runs work without an API key.
+- Every response validated by Pydantic v2 models; LLM output is coerced to the same
+  schemas so malformed AI output never reaches Laravel.
+- Health endpoint returns version + dependency status for observability.
+
+**Verify**: `uvicorn app.main:app --port 8001`; `pytest`; curl health + extract with a
+sample PDF and a sample lab-report image.
+
+**Commits**: `feat: initialize FastAPI service` → `feat: add laboratory report extraction`
+→ `feat: add AI analysis`.
+
+### Milestone 4 — Processing pipeline
+
+**Scope**: Wire uploads to FastAPI asynchronously: `ProcessMedicalDocumentJob`,
+`FastApiClient`, persistence of `document_extractions` / `lab_results` / `ai_analyses` /
+`analysis_items`, status transitions, retries, safe failure handling, and the analysis
+read endpoint.
+
+**Files**
+
+```
+backend/app/
+├── Jobs/ProcessMedicalDocumentJob.php       # uploaded → processing → processed|failed
+├── Services/FastApiClient.php               # Http client, key header, timeout, typed errors
+├── Services/DocumentProcessor.php           # orchestrates job steps
+├── DTOs/ExtractionDto.php, LabResultDto.php, AiAnalysisDto.php
+├── Models/DocumentExtraction.php, LabResult.php, AiAnalysis.php, AnalysisItem.php
+└── Http/Resources/AnalysisResource.php      # analysis + items + linked lab results
+backend/database/migrations/                 # document_extractions, lab_results,
+                                             # ai_analyses, analysis_items
+backend/config/fastapi.php                   # base_url, api_key, timeout (env-driven)
+backend/routes/api.php                       # GET /api/v1/documents/{document}/analysis
+backend/tests/Feature/Documents/             # processing + analysis tests
+```
+
+**Key decisions**
+
+- Upload dispatches the job; status flow `uploaded → processing → processed`, failures
+  mark the document `failed` with a safe technical message (stack traces stay in logs).
+- `FastApiClient` uses Laravel's `Http` client with env-based timeout; typed exceptions
+  (`FastApiConnectionException`, `FastApiResponseException`) separate transient vs
+  permanent failures; never logs document contents.
+- Retries with backoff only for transient (connection/timeout/5xx) failures; permanent
+  parse failures fail fast.
+- `document_extractions.extraction_method`: `pdf_text | ocr | none`.
+- Analysis endpoint enforces the `MedicalDocumentPolicy` (ownership) before returning
+  `AiAnalysis` + `analysis_items` + related `lab_results`.
+- Extractions stored per-document in a transaction; partial failure rolls back cleanly.
+
+**Verify**: `php artisan test` with `Http::fake()` covering status transitions, retries,
+and failures; full-stack smoke against a running FastAPI.
+
+**Commits**: `feat: add document processing jobs` → `test: add document processing tests`.
+
+### Milestone 5 — Vue 3 frontend (`frontend/`)
+
+**Scope**: Complete SPA: foundation (routing, state, HTTP client, layouts) plus every
+page and component from the spec.
+
+**Files**
+
+```
+frontend/
+├── package.json, vite.config.ts, tsconfig.json, index.html
+├── .env.example                              # VITE_API_URL
+└── src/
+    ├── main.ts, App.vue
+    ├── router/index.ts                       # auth-guarded routes
+    ├── stores/auth.ts, reports.ts            # Pinia
+    ├── api/client.ts                         # axios + Bearer token interceptor
+    ├── api/auth.ts, api/documents.ts
+    ├── types/                                # User, Document, Analysis DTOs
+    ├── layouts/AppLayout.vue, Nav.vue
+    ├── components/ StatusBadge.vue, UploadDropzone.vue, ReportCard.vue,
+    │               ResultCard.vue, Disclaimer.vue, LoadingState.vue,
+    │               ErrorState.vue, EmptyState.vue
+    ├── composables/ useAuth.ts, usePolling.ts
+    └── views/ Login.vue, Register.vue, Dashboard.vue, Reports.vue,
+               Upload.vue, ReportDetail.vue, Profile.vue, Settings.vue
+```
+
+**Key decisions**
+
+- Vite + Vue 3 + TypeScript; Tailwind for a modern responsive UI.
+- Auth token kept in Pinia and `localStorage`; axios interceptor attaches the Bearer
+  header and redirects on 401.
+- Route guards redirect unauthenticated users to `/login`.
+- `ReportDetail` polls document status until `processed`, then renders results with
+  loading / error / empty states.
+- Medical disclaimer shown wherever results or AI content is displayed.
+
+**Verify**: `npm run dev` / `npm run build`; vitest unit tests for auth, upload, and
+report rendering flows.
+
+**Commits**: `feat: add Vue dashboard` → `feat: add report analysis UI`.
+
+### Milestone 6 — Hardening, docs & Docker
+
+**Scope**: Production-readiness polish: full `docker-compose` stack, container
+Dockerfiles, audit/rate-limit review, and complete README.
+
+**Files**
+
+```
+docker-compose.yml               # nginx, frontend, backend, queue worker, ai-service,
+                                 # postgres, redis
+docker/laravel/Dockerfile
+docker/fastapi/Dockerfile
+docker/nginx/default.conf        # reverse proxy + static frontend
+README.md                        # full setup, dev + deploy instructions
+```
+
+**Key decisions**
+
+- Secrets injected via env; `.env.example` at repo root.
+- Named volumes for the database and private document storage.
+- Dedicated Laravel queue-worker service alongside the API.
+- Healthchecks on every service; FastAPI `GET /health` wired into compose.
+- Multi-stage builds to keep images lean.
+
+**Verify**: `docker compose up` brings the full stack healthy; end-to-end smoke
+(register → upload → processed → results).
+
+**Commit**: `docs: add project documentation`.
+
 ## Security & safety principles
 
 - Sanctum bearer tokens; passwords always hashed (`bcrypt`).
