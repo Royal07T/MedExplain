@@ -42,4 +42,24 @@ class UserFactory extends Factory
             'email_verified_at' => null,
         ]);
     }
+
+    /**
+     * Indicate that the user is a clinician.
+     */
+    public function clinician(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => 'clinician',
+        ]);
+    }
+
+    /**
+     * Indicate that the user is on the paid (Pro) plan.
+     */
+    public function pro(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'plan' => 'pro',
+        ]);
+    }
 }

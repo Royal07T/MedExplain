@@ -17,6 +17,7 @@ final class DocumentService
     public function __construct(
         private readonly DocumentStorage $storage,
         private readonly AuditService $auditService,
+        private readonly NotificationService $notifications,
     ) {}
 
     /**
@@ -37,6 +38,14 @@ final class DocumentService
         ]);
 
         $this->auditService->record(AuditEvent::DocumentUploaded, $user, $document);
+
+        $this->notifications->notify(
+            $user,
+            'Document uploaded',
+            sprintf('"%s" is being processed.', $document->original_filename),
+            'document',
+            ['document_id' => $document->id],
+        );
 
         ProcessMedicalDocumentJob::dispatch($document->id);
 

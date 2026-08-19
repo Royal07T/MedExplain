@@ -69,6 +69,11 @@ def detect_document_type(text: str, filename: str | None = None) -> DocumentType
     return DocumentType.UNKNOWN
 
 
+def compare_value_to_range(value: str, ref: str | None) -> LabResultStatus:
+    """Public wrapper around :func:`_compare` for store-driven status checks."""
+    return _compare(value, ref)
+
+
 def _clean(line: str) -> str:
     return re.sub(r"[\t|•·*]", " ", line).strip()
 

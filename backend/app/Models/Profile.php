@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['user_id', 'first_name', 'last_name', 'date_of_birth', 'gender'])]
+#[Fillable(['user_id', 'first_name', 'last_name', 'date_of_birth', 'gender', 'avatar_path'])]
 class Profile extends Model
 {
     /**

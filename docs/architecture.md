@@ -36,28 +36,35 @@ Vue 3 SPA ──HTTPS/JSON──► Laravel 13 REST API ──► Database (MySQ
 
 ```
 backend/     Laravel 13 REST API
-frontend/    Vue 3 + TypeScript SPA (planned)
-ai-service/  FastAPI service (planned)
-docker/      Docker dev infrastructure (planned)
+frontend/    Vue 3 + TypeScript SPA
+ai-service/  FastAPI service
+docker/      Docker dev infrastructure
 docs/        This documentation
 ```
 
-## Database schema (planned / in-progress)
+## Database schema
 
 Tables: `users`, `profiles`, `medical_documents`, `document_extractions`, `lab_results`,
-`ai_analyses`, `analysis_items`, `audit_logs`, plus Laravel framework tables
+`ai_analyses`, `analysis_items`, `medications`, `audit_logs`, `clinician_patient_access`,
+`api_partners`, `patient_consents`, `notifications`, plus Laravel framework tables
 (`personal_access_tokens`, `jobs`, `failed_jobs`, `cache`, `sessions`, `password_reset_tokens`).
+
+Key columns:
+- `users.role`: `patient | clinician` (default `patient`)
+- `users.plan`: `free | pro` (default `free`)
+- `clinician_patient_access`: many-to-many `clinician_user_id` ↔ `patient_user_id` — the
+  single source of truth for clinician authorization.
+- `api_partners`: `client_id`, `client_secret` (hashed), `scopes` (json), `quota_per_minute`,
+  `is_active`.
+- `patient_consents`: `partner_id` ↔ `patient_user_id`, `scopes` (json), `granted_at`,
+  `revoked_at`.
+- `notifications`: `user_id`, `title`, `body`, `type`, `data` (json), `read_at`.
 
 Statuses are stored as string enums:
 - `medical_documents.status`: `uploaded | processing | processed | failed`
 - `medical_documents.document_type`: `lab_report | doctor_report | radiology_report | unknown`
 - `lab_results.status`: `within_range | above_range | below_range | positive | negative | unknown`
 - `ai_analyses.status`: `pending | completed | failed`
-
-Implemented in Milestone 1: `users` (Laravel default), `profiles`, `audit_logs`,
-`personal_access_tokens`, and the framework tables. `medical_documents` was added in
-Milestone 2. The remaining tables (`document_extractions`, `lab_results`, `ai_analyses`,
-`analysis_items`) land with the processing pipeline in Milestone 4.
 
 ## Laravel ↔ FastAPI contract (Milestone 3)
 
@@ -79,11 +86,92 @@ Milestone 2. The remaining tables (`document_extractions`, `lab_results`, `ai_an
 | POST | `/api/v1/auth/email/verification-notification` | token | Resend verification |
 | GET  | `/api/v1/email/verify/{id}/{hash}` | signed | Verify email |
 | GET  | `/api/v1/user` | token | Current user + profile |
-| GET/POST | `/api/v1/documents` | token | List / upload documents (Milestone 2) |
-| GET/DELETE | `/api/v1/documents/{document}` | token | View / delete (Milestone 2) |
-| GET  | `/api/v1/documents/{document}/analysis` | token | Analysis (Milestone 4) |
+| PUT  | `/api/v1/user` | token | Update name + profile details |
+| POST | `/api/v1/user/avatar` | token | Upload avatar image |
+| GET/POST | `/api/v1/documents` | token | List / upload documents |
+| GET/DELETE | `/api/v1/documents/{document}` | token | View / delete |
+| GET  | `/api/v1/documents/{document}/analysis` | token | AI analysis |
+| GET  | `/api/v1/labs/names` | token | Known lab test names |
+| GET  | `/api/v1/labs/trends` | token | Lab value trends |
+| GET  | `/api/v1/health/timeline` | token | Recent health events |
+| GET  | `/api/v1/health/record` | token | Aggregated personal health record |
+| GET  | `/api/v1/medications` | token | User's medications |
+| POST | `/api/v1/assistant/chat` | token | AI assistant chat (throttled) |
+| GET  | `/api/v1/plan` | token | Current plan summary |
+| POST | `/api/v1/plan/upgrade` | token | Upgrade to Pro (audited) |
+| POST | `/api/v1/plan/cancel` | token | Cancel subscription (audited) |
+| GET  | `/api/v1/notifications` | token | List notifications + unread count |
+| GET  | `/api/v1/notifications/unread-count` | token | Unread badge count |
+| POST | `/api/v1/notifications/read-all` | token | Mark all read |
+| POST | `/api/v1/notifications/{id}/read` | token | Mark one read (user-scoped) |
+| GET/POST | `/api/v1/clinician/patients` | clinician | List / grant patient access |
+| GET  | `/api/v1/clinician/patients/{patient}/record` | clinician | View granted patient's record |
+| GET  | `/api/v1/partner/consents` | token | List the patient's consents |
+| POST/DELETE | `/api/v1/partner/consents/{partner}` | token | Grant / revoke consent |
+| POST | `/api/v1/partner/oauth/token` | – | Partner client-credentials token |
+| GET  | `/api/v1/partner/patients` | partner | Patients with active consent |
+| GET  | `/api/v1/partner/patients/{patient}/record` | partner | Consent-scoped health record |
+| GET  | `/api/v1/api-docs` | – | OpenAPI 3.0 spec |
 
-All document routes enforce ownership via Laravel Policies — never frontend-only checks.
+All user-facing document routes enforce ownership via Laravel Policies — never
+frontend-only checks. Partner routes are additionally consent-scoped, clinician routes
+require an explicit grant, and notifications are user-scoped.
+
+## Post-MVP feature areas
+
+These areas were added after the original milestones and are fully implemented,
+tested, and verified.
+
+### Personal health record
+
+`HealthService::record()` aggregates, per patient: the latest result for each lab test,
+all medications, a recent-events timeline, and profile summary. Exposed as
+`GET /health/record` for the patient's own app, and — with an active consent — to
+partners and (on explicit grant) clinicians via the same service.
+
+### Clinician portal (role-based access)
+
+- `UserRole` enum (`patient` / `clinician`) on `users.role`, default `patient`.
+- `role` middleware alias → `EnsureUserRole` (fails closed, `403`).
+- `clinician_patient_access` pivot is the **single source of truth** for authorization:
+  a clinician only ever views patients explicitly granted by email. Grants and every
+  record view are audited (`clinician_access_granted`, `clinician_record_viewed`).
+- The granted patient receives an in-app notification when a clinician is granted access.
+
+### Provider (partner) integration
+
+- `api_partners` hold client credentials (hashed), scopes, a per-minute quota, and an
+  active flag. `PatientConsent` is patient-managed and scope-specific.
+- OAuth 2.0 client-credentials token endpoint (`POST /partner/oauth/token`) issues a
+  Sanctum token bound to the partner model.
+- Partner middleware aliases: `partner` (`EnsureActivePartner`) and
+  `partner-scope:health_record:read` (`EnsurePartnerScope`); rate limiter `partner` is
+  keyed by partner id using `quota_per_minute` (excess → `429`).
+- Every record access requires an active consent and is audited
+  (`partner_token_issued`, `partner_record_accessed`). Consent grant/revoke by the
+  patient is audited and produces an in-app notification.
+
+### Plans & subscriptions
+
+- `Plan` enum (`free` / `pro`), default `free`, exposed via `UserResource.plan`.
+- Idempotent `PlanService::upgrade()` / `cancel()` backed by `POST /plan/upgrade` and
+  `POST /plan/cancel` (audited, rate-limited). No billing provider is integrated yet —
+  these simulate the subscription change. Upgrade/cancel produces an in-app
+  notification.
+
+### In-app notifications
+
+- `notifications` table + `NotificationService`; `NotificationController` endpoints are
+  strictly user-scoped (reading or mutating another user's notification → `403`).
+- Real events create notifications: document uploaded, analysis ready, processing
+  failed, plan upgraded/cancelled, partner connected/disconnected, and clinician access
+  granted. The SPA bell polls the unread count and renders a dropdown with
+  mark-single / mark-all actions.
+
+### OpenAPI documentation
+
+`GET /api/v1/api-docs` serves `backend/resources/api/openapi.json` (OpenAPI 3.0),
+documenting the partner-facing endpoints plus account, plan, and notification routes.
 
 ## Document processing pipeline (Milestone 2–4)
 
@@ -103,10 +191,15 @@ test), and committed before the next begins.
 |---|-----------|----------|--------|
 | 1 | Foundation + Laravel authentication | Monorepo, Laravel scaffold, envs, `users`/`profiles`/`audit_logs` schema, Sanctum auth API (register/login/logout/verification/password reset), rate limiting, tests | ✅ Done |
 | 2 | Medical document upload & storage | `medical_documents` schema, model, policy, controller, private `documents` disk, upload validation (MIME/size), list/view/delete, audit events, tests | ✅ Done |
-| 3 | FastAPI service | FastAPI scaffold, `GET /health`, `POST /documents/extract`, `POST /documents/parse-lab-report`, `POST /analysis/explain`, Pydantic schemas, text extraction / OCR, lab parsing, LLM provider abstraction, tests | ⏳ Planned |
-| 4 | Processing pipeline | `ProcessMedicalDocumentJob`, `FastApiClient`, persistence of `document_extractions`/`lab_results`/`ai_analyses`/`analysis_items`, status transitions, retries, safe failure handling | ⏳ Planned |
-| 5 | Vue 3 frontend | SPA foundation (router guards, Pinia, axios, layout), auth pages, dashboard, upload flow, report/results UI, status badges, loading/error/empty states, disclaimer | ⏳ Planned |
-| 6 | Hardening, docs & Docker | Audit wiring polish, rate-limit review, full README, `docker-compose.yml` (frontend, Laravel, FastAPI, PostgreSQL, Redis), full-stack tests | ⏳ Planned |
+| 3 | FastAPI service | FastAPI scaffold, `GET /health`, `POST /documents/extract`, `POST /documents/parse-lab-report`, `POST /analysis/explain`, Pydantic schemas, text extraction / OCR, lab parsing, LLM provider abstraction, tests | ✅ Done |
+| 4 | Processing pipeline | `ProcessMedicalDocumentJob`, `FastApiClient`, persistence of `document_extractions`/`lab_results`/`ai_analyses`/`analysis_items`, status transitions, retries, safe failure handling | ✅ Done |
+| 5 | Vue 3 frontend | SPA foundation (router guards, Pinia, axios, layout), auth pages, dashboard, upload flow, report/results UI, status badges, loading/error/empty states, disclaimer | ✅ Done |
+| 6 | Hardening, docs & Docker | Audit wiring polish, rate-limit review, full README, `docker-compose.yml` (frontend, Laravel, FastAPI, PostgreSQL, Redis), full-stack tests | ✅ Done |
+| 7 | Medication intelligence + AI assistant | Medications management + patient-grounded assistant UI (backend + ai-service + frontend) | ✅ Done |
+| 8 | Personal health record | `GET /health/record` aggregation + frontend health-record view | ✅ Done |
+| 9 | Clinician portal | Roles, explicit grants, clinician record access, audit events | ✅ Done |
+| 10 | Provider integration + API platform | OAuth client credentials, patient consents, consent-scoped partner access, OpenAPI docs | ✅ Done |
+| 11 | Plans, notifications & responsive UI | Free/Pro plans, in-app notifications, SaaS-style responsive shell | ✅ Done |
 
 Suggested commit sequence (used so far, to be continued):
 
@@ -114,13 +207,18 @@ Suggested commit sequence (used so far, to be continued):
 feat: initialize Laravel backend              ✅ 4d39d67
 feat: add authentication                      ✅ 56be490
 feat: add medical document uploads            ✅ 6c299f0
-feat: initialize FastAPI service              ⏳
-feat: add laboratory report extraction        ⏳
-feat: add AI analysis                         ⏳
-feat: add Vue dashboard                       ⏳
-feat: add report analysis UI                  ⏳
-test: add document processing tests           ⏳
-docs: add project documentation               ⏳
+feat: initialize FastAPI service              ✅
+feat: add laboratory report extraction        ✅
+feat: add AI analysis                         ✅
+feat: add Vue dashboard                       ✅
+feat: add report analysis UI                  ✅
+feat: add medications & AI assistant          ✅
+feat: add personal health record              ✅
+feat: add clinician portal                    ✅
+feat: add provider integration & API docs     ✅
+feat: add plans, notifications & responsive UI ✅
+test: add document processing tests           ✅
+docs: add project documentation               ✅
 ```
 
 ### Milestone 3 — FastAPI service (`ai-service/`)
@@ -303,6 +401,11 @@ README.md                        # full setup, dev + deploy instructions
 - Sanctum bearer tokens; passwords always hashed (`bcrypt`).
 - Private storage; no public medical document URLs.
 - Ownership via policies; server-side authorization.
+- Role-based access (`patient`/`clinician`); clinician record access requires an explicit
+  grant and every access is audited.
+- Partner access is consent-scoped: an active, scope-specific patient consent is required,
+  with per-partner rate limiting and full auditing.
+- Notifications are user-scoped; a user can only read or update their own.
 - Audit log for security-sensitive actions; never stores document contents or test values.
 - Rate limiting on auth endpoints; no account enumeration via forgot-password.
 - Medical disclaimer in UI; AI distinguishes facts / reference comparison / education /

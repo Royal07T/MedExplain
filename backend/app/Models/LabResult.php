@@ -9,11 +9,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
     'document_extraction_id',
+    'user_id',
     'name',
+    'normalized_name',
     'value',
     'unit',
+    'loinc',
     'reference_range',
     'status',
+    'collected_at',
     'sort_order',
 ])]
 class LabResult extends Model
@@ -28,6 +32,7 @@ class LabResult extends Model
         return [
             'status' => LabResultStatus::class,
             'sort_order' => 'integer',
+            'collected_at' => 'datetime',
         ];
     }
 
@@ -37,5 +42,13 @@ class LabResult extends Model
     public function documentExtraction(): BelongsTo
     {
         return $this->belongsTo(DocumentExtraction::class);
+    }
+
+    /**
+     * The user who owns the source document for this result.
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 }

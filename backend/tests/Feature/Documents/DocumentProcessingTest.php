@@ -137,4 +137,76 @@ class DocumentProcessingTest extends TestCase
         $this->assertSame('processed', $document->status->value);
         $this->assertSame('unknown', $document->document_type->value);
     }
+
+    public function test_stores_medications_when_extracted(): void
+    {
+        Storage::fake('documents');
+        $this->fakeFastApi();
+
+        Http::fake([
+            '*/api/v1/medications/extract' => Http::response([
+                'medications' => [
+                    [
+                        'name' => 'Metformin',
+                        'strength' => '500 mg',
+                        'dosage_form' => 'tablet',
+                        'dose' => '500',
+                        'frequency' => 'twice daily',
+                        'route' => 'oral',
+                        'prescriber' => null,
+                        'indications' => null,
+                        'start_date' => null,
+                        'end_date' => null,
+                    ],
+                ],
+                'warnings' => [],
+            ], 200),
+        ]);
+
+        $user = User::factory()->create();
+        $document = MedicalDocument::factory()->for($user)->create([
+            'status' => 'uploaded',
+            'document_type' => 'unknown',
+        ]);
+        Storage::disk('documents')->put($document->storage_path, 'pdf-bytes');
+
+        $this->app->make(DocumentProcessor::class)->process($document);
+
+        $document->refresh();
+
+        $this->assertSame('processed', $document->status->value);
+        $this->assertDatabaseHas('medications', [
+            'user_id' => $user->id,
+            'medical_document_id' => $document->id,
+            'name' => 'Metformin',
+            'strength' => '500 mg',
+            'frequency' => 'twice daily',
+        ]);
+    }
+
+    public function test_medication_failure_does_not_fail_document(): void
+    {
+        Storage::fake('documents');
+        $this->fakeFastApi();
+
+        Http::fake([
+            '*/api/v1/medications/extract' => Http::response(['detail' => 'boom'], 500),
+        ]);
+
+        $user = User::factory()->create();
+        $document = MedicalDocument::factory()->for($user)->create([
+            'status' => 'uploaded',
+            'document_type' => 'unknown',
+        ]);
+        Storage::disk('documents')->put($document->storage_path, 'pdf-bytes');
+
+        $this->app->make(DocumentProcessor::class)->process($document);
+
+        $document->refresh();
+
+        $this->assertSame('processed', $document->status->value);
+        $this->assertDatabaseMissing('medications', [
+            'medical_document_id' => $document->id,
+        ]);
+    }
 }

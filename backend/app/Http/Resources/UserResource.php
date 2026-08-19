@@ -18,6 +18,8 @@ class UserResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'email' => $this->email,
+            'role' => $this->role?->value ?? 'patient',
+            'plan' => $this->plan?->value ?? 'free',
             'email_verified_at' => $this->email_verified_at?->toISOString(),
             'profile' => new ProfileResource($this->whenLoaded('profile')),
             'created_at' => $this->created_at?->toISOString(),

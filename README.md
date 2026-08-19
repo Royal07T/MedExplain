@@ -14,15 +14,30 @@ separated from medical advice.
 - AI pipeline: text extraction → lab-result parsing → educational explanations.
 - Human-readable analysis with categorized items, reference-range comparisons,
   and "questions to ask your clinician".
+- Lab trends and a health timeline across uploaded reports.
+- Personal health record: the latest result per lab test, medications, and a
+  recent-events timeline in one view.
+- AI assistant grounded in the user's own medications and health context.
+- Clinician portal: role-based access (patient/clinician) with explicit,
+  audited patient grants — clinicians only ever see consented patients.
+- Provider (partner) integration: OAuth 2.0 client credentials, patient-managed
+  consent, consent-scoped health-record access, and per-partner rate limits.
+- OpenAPI 3.0 spec served at `GET /api/v1/api-docs`.
+- Plans & subscriptions: Free/Pro plans with an idempotent, audited
+  upgrade/cancel flow.
+- In-app notifications for uploads, analysis readiness, plan changes, consents,
+  and clinician access.
 - Email verification, password reset, rate-limited auth, server-side ownership
   enforcement, and an audit log for security-sensitive actions.
+- Responsive SaaS-style UI: grouped sidebar navigation plus a top navbar with
+  notifications and account controls.
 
 ## Architecture
 
 | Component | Tech | Port (compose) | Purpose |
 | --- | --- | --- | --- |
 | `frontend/` | Vue 3 + Vite + TS + Tailwind | 80 (nginx) | SPA, polls analysis status |
-| `backend/` | Laravel 12 + PHP 8.3 | 9000 (php-fpm, internal) | REST API, auth, uploads, queue |
+| `backend/` | Laravel 13 + PHP 8.3 | 9000 (php-fpm, internal) | REST API, auth, uploads, queue |
 | `ai-service/` | FastAPI + Python 3.12 | 8000 (internal) | Extraction, lab parsing, LLM |
 | `worker` | Laravel queue worker | — | Processes upload jobs asynchronously |
 | `db` | MySQL 8.4 | 3306 (internal) | Data store |
@@ -63,7 +78,7 @@ php artisan key:generate
 # point DB_* at your MySQL, or set DB_CONNECTION=sqlite for quick local runs
 php artisan migrate
 php artisan serve --port=8000
-php artisan test        # 57 tests, 196 assertions
+php artisan test        # 116 tests, 403 assertions
 ```
 
 ### 2. AI service
@@ -73,7 +88,7 @@ cd ai-service
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"          # optional OCR: pip install -e ".[dev,ocr]" + tesseract
 uvicorn app.main:app --port 8001
-pytest                        # 32 tests
+pytest                        # 101 tests
 ```
 
 Set `FASTAPI_BASE_URL=http://127.0.0.1:8001` and a shared
@@ -91,7 +106,7 @@ model id.
 cd frontend
 npm install
 npm run dev            # http://localhost:5173 (proxies /api to :8000)
-npm run build && npm test
+npm run build && npm test   # 58 tests
 ```
 
 For local queue processing (required to see results), either set
@@ -154,7 +169,13 @@ Key variables (full list in `.env.example`):
 - Sanctum bearer tokens; passwords hashed with bcrypt.
 - Medical documents stored on a private disk; never publicly addressable.
 - Ownership enforced via policies; document processing runs per-user.
+- Role-based access: `patient`/`clinician` roles, and clinicians only ever view
+  patients they were explicitly granted (grants are audited, never inferred).
+- Partner access is consent-scoped: a provider can only read a patient's
+  record with an active, scope-specific consent granted by the patient, and
+  every access is audited. Each partner has a per-minute rate limit.
 - Rate limits on auth (5/min), uploads (10/min), and general API (60/min).
+- Notifications are user-scoped: a user can only ever read or update their own.
 - Audit log records security-sensitive actions without ever storing document
   contents or test values.
 - AI responses are split into `fact`, `reference_comparison`, `education`,

@@ -1,0 +1,385 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "MedExplain HealthTech API",
+    "version": "1.0.0",
+    "description": "Consent-scoped, partner-facing API for reading a patient's personal health record.\n\n## Authorization\n\nPartners authenticate with OAuth 2.0 client credentials. Exchange your `client_id` and `client_secret` for a bearer token at `POST /api/v1/partner/oauth/token`.\n\n## Consent\n\nA patient's health record is only ever accessible with an active, scope-specific consent granted by the patient themselves. Access without consent is rejected with `403`.\n\n## Rate limits\n\nEach partner has a per-minute quota configured on their registration (`quota_per_minute`). Exceeding the quota returns `429 Too Many Requests`. Requests are keyed by the partner identity.\n\n## Scopes\n\n| Scope | Description |\n| --- | --- |\n| `health_record:read` | Read the consented patient's aggregated health record |\n\n## Safety\n\nThe API never returns raw medical document contents, only the structured, reviewed representation. Every data access is recorded in the audit log."
+  },
+  "servers": [
+    { "url": "https://api.medexplain.local/api/v1" }
+  ],
+  "paths": {
+    "/partner/oauth/token": {
+      "post": {
+        "summary": "Obtain a bearer token (client credentials)",
+        "tags": ["Auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["grant_type", "client_id", "client_secret"],
+                "properties": {
+                  "grant_type": { "type": "string", "enum": ["client_credentials"] },
+                  "client_id": { "type": "string" },
+                  "client_secret": { "type": "string", "format": "password" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token issued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "access_token": { "type": "string" },
+                    "token_type": { "type": "string", "example": "Bearer" },
+                    "scope": { "type": "string", "example": "health_record:read" }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid client credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": { "type": "string", "example": "invalid_client" }
+                  }
+                }
+              }
+            }
+          },
+          "429": { "description": "Too many requests" }
+        }
+      }
+    },
+    "/partner/patients": {
+      "get": {
+        "summary": "List consented patients",
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Health records"],
+        "responses": {
+          "200": {
+            "description": "Patients with an active consent for this partner",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "integer" },
+                          "name": { "type": "string" },
+                          "scopes": { "type": "array", "items": { "type": "string" } }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": { "description": "Missing scope or inactive partner" },
+          "429": { "description": "Partner quota exceeded" }
+        }
+      }
+    },
+    "/partner/patients/{id}/record": {
+      "get": {
+        "summary": "Read a patient's health record",
+        "description": "Requires an active `health_record:read` consent from the patient. Access is audited.",
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Health records"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Aggregated personal health record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "profile": {
+                          "type": "object",
+                          "properties": {
+                            "name": { "type": "string" },
+                            "email": { "type": "string" },
+                            "date_of_birth": { "type": ["string", "null"], "format": "date-time" },
+                            "gender": { "type": ["string", "null"] }
+                          }
+                        },
+                        "labs": {
+                          "type": "array",
+                          "description": "Latest result per lab test",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": { "type": "string" },
+                              "value": { "type": ["string", "null"] },
+                              "unit": { "type": ["string", "null"] },
+                              "status": { "type": "string" },
+                              "reference_range": { "type": ["string", "null"] },
+                              "last_collected_at": { "type": ["string", "null"] }
+                            }
+                          }
+                        },
+                        "medications": { "type": "array", "items": { "type": "object" } },
+                        "timeline": {
+                          "type": "array",
+                          "description": "Most recent health events"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": { "description": "No active consent for this patient" },
+          "404": { "description": "Patient not found" },
+          "429": { "description": "Partner quota exceeded" }
+        }
+      }
+    },
+    "/plan": {
+      "get": {
+        "summary": "View the authenticated user's current plan",
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Account"],
+        "responses": {
+          "200": {
+            "description": "Current plan summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "plan": { "type": "string", "enum": ["free", "pro"] },
+                        "label": { "type": "string", "example": "Free" },
+                        "is_pro": { "type": "boolean" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthenticated" }
+        }
+      }
+    },
+    "/plan/upgrade": {
+      "post": {
+        "summary": "Upgrade the authenticated user to the paid plan",
+        "description": "Idempotent and audited. Simulates a successful subscription (no billing provider is integrated yet).",
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Account"],
+        "responses": {
+          "200": {
+            "description": "Updated user with `plan` set to `pro`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": { "$ref": "#/components/schemas/User" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthenticated" },
+          "429": { "description": "Too many requests" }
+        }
+      }
+    },
+    "/plan/cancel": {
+      "post": {
+        "summary": "Cancel the authenticated user's subscription",
+        "description": "Idempotent and audited. Simulates a cancelled subscription and returns the user to the free plan.",
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Account"],
+        "responses": {
+          "200": {
+            "description": "Updated user with `plan` set to `free`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": { "$ref": "#/components/schemas/User" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthenticated" },
+          "429": { "description": "Too many requests" }
+        }
+      }
+    },
+    "/notifications": {
+      "get": {
+        "summary": "List the authenticated user's notifications",
+        "description": "Returns the 50 most recent notifications and the count of unread ones.",
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Notifications"],
+        "responses": {
+          "200": {
+            "description": "Notifications with the unread count",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Notification" }
+                    },
+                    "unread_count": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthenticated" }
+        }
+      }
+    },
+    "/notifications/unread-count": {
+      "get": {
+        "summary": "Get the unread notification count",
+        "description": "A lightweight endpoint for the notification badge.",
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Notifications"],
+        "responses": {
+          "200": {
+            "description": "Unread count",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "unread_count": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthenticated" }
+        }
+      }
+    },
+    "/notifications/read-all": {
+      "post": {
+        "summary": "Mark all notifications as read",
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Notifications"],
+        "responses": {
+          "200": {
+            "description": "All notifications marked as read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "unread_count": { "type": "integer", "example": 0 }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthenticated" }
+        }
+      }
+    },
+    "/notifications/{id}/read": {
+      "post": {
+        "summary": "Mark a single notification as read",
+        "description": "User-scoped: a user can only mark their own notifications as read.",
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Notifications"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The updated notification",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Notification" }
+              }
+            }
+          },
+          "401": { "description": "Unauthenticated" },
+          "403": { "description": "Notification belongs to another user" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "role": { "type": "string", "enum": ["patient", "clinician"] },
+          "plan": { "type": "string", "enum": ["free", "pro"] },
+          "email_verified_at": { "type": ["string", "null"], "format": "date-time" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "profile": { "type": ["object", "null"] }
+        }
+      },
+      "Notification": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "title": { "type": "string" },
+          "body": { "type": ["string", "null"] },
+          "type": { "type": "string" },
+          "data": { "type": ["object", "null"], "additionalProperties": true },
+          "read_at": { "type": ["string", "null"], "format": "date-time" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      }
+    }
+  }
+}

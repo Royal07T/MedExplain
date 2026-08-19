@@ -5,6 +5,7 @@ namespace App\Services;
 use App\DTOs\AiAnalysisDto;
 use App\DTOs\ExtractionDto;
 use App\DTOs\LabResultDto;
+use App\DTOs\MedicationDto;
 use App\Enums\AiAnalysisStatus;
 use App\Enums\AuditEvent;
 use App\Enums\DocumentStatus;
@@ -30,6 +31,7 @@ final class DocumentProcessor
     public function __construct(
         private readonly FastApiClient $client,
         private readonly AuditService $auditService,
+        private readonly NotificationService $notifications,
     ) {}
 
     /**
@@ -54,7 +56,9 @@ final class DocumentProcessor
                 $extractionRow = $this->storeExtraction($document, $extractionDto);
 
                 $labTests = $this->client->parseLabReport($extractionDto);
-                $this->storeLabResults($extractionRow, $labTests);
+                $this->storeLabResults($document, $extractionRow, $labTests);
+
+                $this->extractAndStoreMedications($document, $extractionDto);
 
                 $analysis = $this->client->explain($extractionDto, $labTests);
                 $this->storeAnalysis($document, $analysis);
@@ -79,6 +83,14 @@ final class DocumentProcessor
         ]);
 
         $this->auditService->record(AuditEvent::AnalysisCreated, $document->user, $document);
+
+        $this->notifications->notify(
+            $document->user,
+            'Analysis ready',
+            sprintf('The analysis for "%s" is ready to view.', $document->original_filename),
+            'analysis',
+            ['document_id' => $document->id],
+        );
     }
 
     private function storeExtraction(MedicalDocument $document, ExtractionDto $extraction): DocumentExtraction
@@ -94,17 +106,75 @@ final class DocumentProcessor
     /**
      * @param  list<LabResultDto>  $labTests
      */
-    private function storeLabResults(DocumentExtraction $extraction, array $labTests): void
+    private function storeLabResults(MedicalDocument $document, DocumentExtraction $extraction, array $labTests): void
     {
         $extraction->labResults()->delete();
 
         foreach (array_values($labTests) as $index => $test) {
             $extraction->labResults()->create([
                 'name' => $test->name,
+                'normalized_name' => $this->normalizeName($test->name),
                 'value' => $test->value,
                 'unit' => $test->unit,
                 'reference_range' => $test->referenceRange,
                 'status' => $test->status,
+                'collected_at' => $document->created_at,
+                'user_id' => $document->user_id,
+                'sort_order' => $index,
+            ]);
+        }
+    }
+
+    private function normalizeName(string $name): string
+    {
+        return mb_strtolower(preg_replace('/\s+/', ' ', trim($name)));
+    }
+
+    /**
+     * Best-effort medication extraction.
+     *
+     * Medication extraction is an auxiliary capability: any failure (including
+     * an AI service hiccup) must never fail the whole document. It is logged and
+     * skipped.
+     */
+    private function extractAndStoreMedications(MedicalDocument $document, ExtractionDto $extraction): void
+    {
+        try {
+            $medications = $this->client->extractMedications($extraction);
+
+            if ($medications === []) {
+                return;
+            }
+
+            $this->storeMedications($document, $medications);
+        } catch (\Throwable $e) {
+            Log::warning('document.medication_extraction_skipped', [
+                'document_id' => $document->id,
+                'exception' => get_class($e),
+            ]);
+        }
+    }
+
+    /**
+     * @param  list<MedicationDto>  $medications
+     */
+    private function storeMedications(MedicalDocument $document, array $medications): void
+    {
+        $document->medications()->delete();
+
+        foreach (array_values($medications) as $index => $medication) {
+            $document->medications()->create([
+                'user_id' => $document->user_id,
+                'name' => $medication->name,
+                'strength' => $medication->strength,
+                'dosage_form' => $medication->dosageForm,
+                'dose' => $medication->dose,
+                'frequency' => $medication->frequency,
+                'route' => $medication->route,
+                'prescriber' => $medication->prescriber,
+                'indications' => $medication->indications,
+                'start_date' => $medication->startDate,
+                'end_date' => $medication->endDate,
                 'sort_order' => $index,
             ]);
         }
@@ -156,6 +226,14 @@ final class DocumentProcessor
             'exception' => get_class($e),
             'message' => $e->getMessage(),
         ]);
+
+        $this->notifications->notify(
+            $document->user,
+            'Processing failed',
+            $this->safeMessage($e),
+            'analysis',
+            ['document_id' => $document->id],
+        );
     }
 
     private function safeMessage(\Throwable $e): string

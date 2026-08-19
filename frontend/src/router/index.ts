@@ -34,6 +34,36 @@ const router = createRouter({
           component: () => import('@/views/Reports.vue'),
         },
         {
+          path: 'trends',
+          name: 'trends',
+          component: () => import('@/views/Trends.vue'),
+        },
+        {
+          path: 'timeline',
+          name: 'timeline',
+          component: () => import('@/views/Timeline.vue'),
+        },
+        {
+          path: 'health-record',
+          name: 'healthRecord',
+          component: () => import('@/views/HealthRecord.vue'),
+        },
+        {
+          path: 'medications',
+          name: 'medications',
+          component: () => import('@/views/Medications.vue'),
+        },
+        {
+          path: 'assistant',
+          name: 'assistant',
+          component: () => import('@/views/Assistant.vue'),
+        },
+        {
+          path: 'clinician-portal',
+          name: 'clinicianPortal',
+          component: () => import('@/views/ClinicianPortal.vue'),
+        },
+        {
           path: 'reports/upload',
           name: 'reports.upload',
           component: () => import('@/views/Upload.vue'),
@@ -54,14 +84,28 @@ const router = createRouter({
           name: 'settings',
           component: () => import('@/views/Settings.vue'),
         },
+        {
+          path: 'connections',
+          name: 'connections',
+          component: () => import('@/views/Connections.vue'),
+        },
       ],
     },
     { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
   ],
 })
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   const auth = useAuthStore()
+
+  if (auth.isAuthenticated && !auth.user) {
+    try {
+      await auth.fetchUser()
+    } catch {
+      auth.clearAuth()
+      return { name: 'login', query: { redirect: to.fullPath } }
+    }
+  }
 
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
     return { name: 'login', query: { redirect: to.fullPath } }

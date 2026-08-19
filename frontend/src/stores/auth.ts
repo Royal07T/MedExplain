@@ -1,6 +1,10 @@
 import { defineStore } from 'pinia'
 
-import type { RegisterPayload, LoginCredentials } from '@/api/auth'
+import type {
+  RegisterPayload,
+  LoginCredentials,
+  UpdateProfilePayload,
+} from '@/api/auth'
 import * as authApi from '@/api/auth'
 import { TOKEN_KEY } from '@/api/client'
 import type { User } from '@/types'
@@ -46,6 +50,18 @@ export const useAuthStore = defineStore('auth', {
 
     async fetchUser() {
       this.user = await authApi.fetchCurrentUser()
+    },
+
+    async updateProfile(payload: UpdateProfilePayload) {
+      this.user = await authApi.updateProfile(payload)
+    },
+
+    async updateAvatar(file: File) {
+      this.user = await authApi.updateAvatar(file)
+    },
+
+    async resendVerificationEmail() {
+      await authApi.resendVerificationEmail()
     },
 
     async logout() {

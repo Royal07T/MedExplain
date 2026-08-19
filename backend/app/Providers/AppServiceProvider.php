@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\ApiPartner;
 use App\Services\FastApiClient;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -41,6 +42,21 @@ class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('documents', function (Request $request) {
             return Limit::perMinute(10)->by($request->user()?->id ?: $request->ip());
+        });
+
+        RateLimiter::for('assistant', function (Request $request) {
+            return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
+        });
+
+        RateLimiter::for('partner-oauth', function (Request $request) {
+            return Limit::perMinute(10)->by($request->input('client_id', '').'|'.$request->ip());
+        });
+
+        RateLimiter::for('partner', function (Request $request) {
+            $principal = $request->user();
+            $quota = $principal instanceof ApiPartner ? $principal->quota_per_minute : 30;
+
+            return Limit::perMinute($quota)->by($principal?->getKey() ?: $request->ip());
         });
     }
 }

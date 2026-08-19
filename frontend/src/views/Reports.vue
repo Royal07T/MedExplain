@@ -16,7 +16,7 @@ onMounted(() => {
 
 <template>
   <div class="space-y-6">
-    <div class="flex items-center justify-between">
+    <div class="flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-2xl font-bold text-slate-900">Reports</h1>
       <router-link
         :to="{ name: 'reports.upload' }"

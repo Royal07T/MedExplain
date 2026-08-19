@@ -11,4 +11,5 @@ class LLMProvider(ABC):
         document_type: DocumentType,
         raw_text: str,
         lab_tests: list[LabTest],
+        knowledge_context: str | None = None,
     ) -> AiAnalysis: ...

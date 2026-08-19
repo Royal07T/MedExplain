@@ -7,6 +7,7 @@ export function useAuth() {
   const user = computed(() => store.user)
   const isAuthenticated = computed(() => store.isAuthenticated)
   const isEmailVerified = computed(() => store.isEmailVerified)
+  const logout = () => store.logout()
 
-  return { store, user, isAuthenticated, isEmailVerified }
+  return { store, user, isAuthenticated, isEmailVerified, logout }
 }

@@ -33,6 +33,12 @@ class LabTest(BaseModel):
     status: LabResultStatus = LabResultStatus.UNKNOWN
 
 
+class LabTestList(BaseModel):
+    """LLM-structured list of laboratory tests (LabAgent fallback schema)."""
+
+    tests: list[LabTest] = Field(default_factory=list)
+
+
 class ExtractionResponse(BaseModel):
     document_type: DocumentType = DocumentType.UNKNOWN
     extraction_method: ExtractionMethod = ExtractionMethod.NONE

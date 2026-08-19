@@ -3,8 +3,10 @@
 namespace App\Services;
 
 use App\DTOs\AiAnalysisDto;
+use App\DTOs\AssistantDto;
 use App\DTOs\ExtractionDto;
 use App\DTOs\LabResultDto;
+use App\DTOs\MedicationDto;
 use App\Exceptions\FastApiConnectionException;
 use App\Exceptions\FastApiResponseException;
 use App\Models\MedicalDocument;
@@ -106,6 +108,62 @@ final class FastApiClient
         });
 
         return AiAnalysisDto::fromArray($this->decode($response));
+    }
+
+    /**
+     * Ask FastAPI to extract medications from the extracted text.
+     *
+     * @return list<MedicationDto>
+     */
+    public function extractMedications(ExtractionDto $extraction): array
+    {
+        $response = $this->attempt(function () use ($extraction): Response {
+            return Http::baseUrl($this->baseUrl)
+                ->withHeaders($this->headers())
+                ->timeout($this->timeout)
+                ->asJson()
+                ->post('/api/v1/medications/extract', [
+                    'raw_text' => $extraction->rawText,
+                    'llm_fallback' => false,
+                ]);
+        });
+
+        return array_map(
+            static fn (array $medication): MedicationDto => MedicationDto::fromArray($medication),
+            $this->decode($response)['medications'] ?? [],
+        );
+    }
+
+    /**
+     * Ask FastAPI for a guarded, educational assistant reply.
+     *
+     * @param  list<LabResultDto>  $labTests
+     * @param  list<MedicationDto>  $medications
+     */
+    public function assistantChat(
+        string $message,
+        array $labTests,
+        array $medications,
+    ): AssistantDto {
+        $response = $this->attempt(function () use ($message, $labTests, $medications): Response {
+            return Http::baseUrl($this->baseUrl)
+                ->withHeaders($this->headers())
+                ->timeout($this->timeout)
+                ->asJson()
+                ->post('/api/v1/assistant/chat', [
+                    'message' => $message,
+                    'lab_tests' => array_map(
+                        static fn (LabResultDto $test): array => $test->toArray(),
+                        $labTests,
+                    ),
+                    'medications' => array_map(
+                        static fn (MedicationDto $medication): array => $medication->toArray(),
+                        $medications,
+                    ),
+                ]);
+        });
+
+        return AssistantDto::fromArray($this->decode($response));
     }
 
     /**

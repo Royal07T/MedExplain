@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable([
@@ -63,5 +64,13 @@ class MedicalDocument extends Model
     public function analysis(): HasOne
     {
         return $this->hasOne(AiAnalysis::class);
+    }
+
+    /**
+     * Medications extracted from this document.
+     */
+    public function medications(): HasMany
+    {
+        return $this->hasMany(Medication::class);
     }
 }

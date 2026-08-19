@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { useAuthStore } from '@/stores/auth'
@@ -8,6 +8,8 @@ const auth = useAuthStore()
 const router = useRouter()
 
 const form = reactive({
+  first_name: '',
+  last_name: '',
   name: '',
   email: '',
   password: '',
@@ -16,6 +18,20 @@ const form = reactive({
 const error = ref<string | null>(null)
 const showPassword = ref(false)
 const showPasswordConfirm = ref(false)
+
+const profileNameTouched = ref(false)
+
+watch(
+  () => [form.first_name, form.last_name],
+  () => {
+    if (profileNameTouched.value) return
+    form.name = [form.first_name, form.last_name].filter(Boolean).join(' ').trim()
+  },
+)
+
+function markProfileNameTouched() {
+  profileNameTouched.value = true
+}
 
 async function submit() {
   error.value = null
@@ -39,14 +55,40 @@ async function submit() {
       <p class="mt-1 text-sm text-slate-500">Free and private &mdash; your reports stay yours.</p>
 
       <form class="mt-6 space-y-4" @submit.prevent="submit">
+        <div class="grid gap-4 sm:grid-cols-2">
+          <label class="block">
+            <span class="text-sm font-medium text-slate-700">First name</span>
+            <input
+              v-model="form.first_name"
+              type="text"
+              required
+              autocomplete="given-name"
+              class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none"
+            />
+          </label>
+
+          <label class="block">
+            <span class="text-sm font-medium text-slate-700">Last name</span>
+            <input
+              v-model="form.last_name"
+              type="text"
+              required
+              autocomplete="family-name"
+              class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none"
+            />
+          </label>
+        </div>
+
         <label class="block">
-          <span class="text-sm font-medium text-slate-700">Name</span>
+          <span class="text-sm font-medium text-slate-700">Profile name</span>
           <input
             v-model="form.name"
             type="text"
             required
             autocomplete="name"
+            @input="markProfileNameTouched"
             class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none"
+            placeholder="How you appear across MedExplain"
           />
         </label>
 

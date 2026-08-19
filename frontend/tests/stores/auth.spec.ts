@@ -6,6 +6,9 @@ vi.mock('@/api/auth', () => ({
   register: vi.fn(),
   logout: vi.fn(),
   fetchCurrentUser: vi.fn(),
+  updateProfile: vi.fn(),
+  updateAvatar: vi.fn(),
+  resendVerificationEmail: vi.fn(),
 }))
 
 import * as authApi from '@/api/auth'
@@ -16,6 +19,8 @@ const user: User = {
   id: 1,
   name: 'Ada Lovelace',
   email: 'ada@example.com',
+  role: 'patient',
+  plan: 'free',
   email_verified_at: null,
   created_at: '2026-01-01T00:00:00Z',
   profile: null,
@@ -50,6 +55,8 @@ describe('auth store', () => {
     const store = useAuthStore()
     await store.register({
       name: user.name,
+      first_name: 'Ada',
+      last_name: 'Lovelace',
       email: user.email,
       password: 'secret',
       password_confirmation: 'secret',
@@ -75,5 +82,41 @@ describe('auth store', () => {
     const store = useAuthStore()
     store.setAuth('token-789', user)
     expect(localStorage.getItem('medexplain_token')).toBe('token-789')
+  })
+
+  it('updateProfile refreshes the stored user', async () => {
+    vi.mocked(authApi.updateProfile).mockResolvedValue({ ...user, name: 'Grace Hopper' })
+
+    const store = useAuthStore()
+    store.setAuth('token-123', user)
+    await store.updateProfile({
+      name: 'Grace Hopper',
+      first_name: 'Grace',
+      last_name: null,
+      date_of_birth: null,
+      gender: null,
+    })
+
+    expect(store.user?.name).toBe('Grace Hopper')
+    expect(authApi.updateProfile).toHaveBeenCalledWith({
+      name: 'Grace Hopper',
+      first_name: 'Grace',
+      last_name: null,
+      date_of_birth: null,
+      gender: null,
+    })
+  })
+
+  it('updateAvatar refreshes the stored user', async () => {
+    vi.mocked(authApi.updateAvatar).mockResolvedValue({
+      ...user,
+      profile: { first_name: null, last_name: null, date_of_birth: null, gender: null, avatar_url: 'http://localhost/storage/avatars/a.png' },
+    })
+
+    const store = useAuthStore()
+    store.setAuth('token-123', user)
+    await store.updateAvatar(new File(['x'], 'a.png', { type: 'image/png' }))
+
+    expect(store.user?.profile?.avatar_url).toBe('http://localhost/storage/avatars/a.png')
   })
 })
