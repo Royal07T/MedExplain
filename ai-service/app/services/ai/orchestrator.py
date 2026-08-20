@@ -6,7 +6,6 @@ constraints before returning structured output.
 """
 
 from app.schemas.analysis import AiAnalysis, ExplainRequest
-from app.schemas.assistant import AssistantRequest, AssistantResponse
 from app.schemas.extraction import (
     DocumentType,
     ExtractionMethod,
@@ -17,7 +16,6 @@ from app.schemas.medication import MedicationExtraction
 from app.services.ai.agents.document_agent import DocumentAgent, UnsupportedFileTypeError
 from app.services.ai.agents.lab_agent import LabAgent
 from app.services.ai.agents.medication_agent import MedicationAgent
-from app.services.ai.assistant import AssistantService
 from app.services.ai.knowledge import KnowledgeBase
 from app.services.llm.base import LLMProvider
 from app.services.llm.gateway import LLMGateway
@@ -41,7 +39,6 @@ class Orchestrator:
         self.medication_agent = MedicationAgent(gateway=gateway)
         self.llm_fallback = llm_fallback
         self.knowledge = knowledge if knowledge is not None else self._default_knowledge()
-        self.assistant = AssistantService(gateway=gateway, knowledge=self.knowledge)
 
     @staticmethod
     def _default_knowledge() -> KnowledgeBase:
@@ -106,9 +103,6 @@ class Orchestrator:
         llm_fallback: bool = False,
     ) -> MedicationExtraction:
         return await self.medication_agent.extract(raw_text, llm_fallback=llm_fallback)
-
-    async def chat(self, request: AssistantRequest) -> AssistantResponse:
-        return await self.assistant.chat(request)
 
     # ------------------------------------------------------------ safety gates
 

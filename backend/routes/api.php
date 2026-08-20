@@ -1,12 +1,12 @@
 <?php
 
+use App\Http\Controllers\Api\V1\ApiDocsController;
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Auth\VerificationController;
-use App\Http\Controllers\Api\V1\AssistantController;
-use App\Http\Controllers\Api\V1\ApiDocsController;
 use App\Http\Controllers\Api\V1\ClinicianController;
 use App\Http\Controllers\Api\V1\DocumentController;
 use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Controllers\Api\V1\HealthQueryController;
 use App\Http\Controllers\Api\V1\LabController;
 use App\Http\Controllers\Api\V1\MedicationController;
 use App\Http\Controllers\Api\V1\NotificationController;
@@ -63,8 +63,8 @@ Route::prefix('v1')->group(function (): void {
             Route::get('health/record', [HealthController::class, 'record']);
 
             Route::get('medications', [MedicationController::class, 'index']);
-            Route::post('assistant/chat', [AssistantController::class, 'chat'])
-                ->middleware('throttle:assistant');
+            Route::post('health/query', [HealthQueryController::class, 'store'])
+                ->middleware('throttle:health-query');
 
             Route::get('plan', [PlanController::class, 'show']);
             Route::post('plan/upgrade', [PlanController::class, 'upgrade']);

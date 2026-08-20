@@ -135,15 +135,33 @@ export interface Medication {
   created_at: string
 }
 
-export interface AssistantReply {
-  reply: string
-  disclaimer: string
-  sources: string[]
-}
-
 export interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
+  answer?: HealthQueryAnswer
+}
+
+export interface HealthQueryContextItem {
+  text: string
+  category: string
+}
+
+export interface HealthQueryDataUsedItem {
+  type: string
+  label: string
+  reference: string | null
+}
+
+export interface HealthQueryAnswer {
+  summary: string
+  facts: string[]
+  changes: string[]
+  context: HealthQueryContextItem[]
+  educational_explanation: string[]
+  questions_for_professional: string[]
+  sources: string[]
+  disclaimer: string
+  data_used: HealthQueryDataUsedItem[]
 }
 
 export interface HealthRecordLab {

@@ -3,8 +3,8 @@
 namespace App\Services;
 
 use App\DTOs\AiAnalysisDto;
-use App\DTOs\AssistantDto;
 use App\DTOs\ExtractionDto;
+use App\DTOs\HealthQueryResponseDto;
 use App\DTOs\LabResultDto;
 use App\DTOs\MedicationDto;
 use App\Exceptions\FastApiConnectionException;
@@ -135,35 +135,33 @@ final class FastApiClient
     }
 
     /**
-     * Ask FastAPI for a guarded, educational assistant reply.
+     * Ask FastAPI for a structured health-intelligence answer to a question.
      *
-     * @param  list<LabResultDto>  $labTests
-     * @param  list<MedicationDto>  $medications
+     * The payload is the deterministic, ownership-scoped context computed by the
+     * backend; FastAPI never receives raw documents, full text, or identifiers.
+     *
+     * @param  array<string, mixed>  $context
      */
-    public function assistantChat(
-        string $message,
-        array $labTests,
-        array $medications,
-    ): AssistantDto {
-        $response = $this->attempt(function () use ($message, $labTests, $medications): Response {
+    public function healthQuery(
+        string $queryId,
+        string $question,
+        string $intent,
+        array $context,
+    ): HealthQueryResponseDto {
+        $response = $this->attempt(function () use ($queryId, $question, $intent, $context): Response {
             return Http::baseUrl($this->baseUrl)
                 ->withHeaders($this->headers())
                 ->timeout($this->timeout)
                 ->asJson()
-                ->post('/api/v1/assistant/chat', [
-                    'message' => $message,
-                    'lab_tests' => array_map(
-                        static fn (LabResultDto $test): array => $test->toArray(),
-                        $labTests,
-                    ),
-                    'medications' => array_map(
-                        static fn (MedicationDto $medication): array => $medication->toArray(),
-                        $medications,
-                    ),
+                ->post('/api/v1/health/query', [
+                    'query_id' => $queryId,
+                    'question' => $question,
+                    'intent' => $intent,
+                    ...$context,
                 ]);
         });
 
-        return AssistantDto::fromArray($this->decode($response));
+        return HealthQueryResponseDto::fromArray($this->decode($response));
     }
 
     /**
@@ -225,8 +223,6 @@ final class FastApiClient
 
     /**
      * Build a safe technical error message from a FastAPI failure.
-     *
-     * @param  mixed  $json
      */
     private function errorMessage(mixed $json, int $status): string
     {

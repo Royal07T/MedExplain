@@ -71,7 +71,8 @@ Statuses are stored as string enums:
 - Auth: `X-Service-Key` header, compared with constant-time compare using `FASTAPI_API_KEY`.
 - Config via env: `FASTAPI_BASE_URL`, `FASTAPI_API_KEY`, `FASTAPI_TIMEOUT`.
 - Endpoints: `GET /api/v1/health`, `POST /api/v1/documents/extract`,
-  `POST /api/v1/documents/parse-lab-report`, `POST /api/v1/analysis/explain`.
+  `POST /api/v1/documents/parse-lab-report`, `POST /api/v1/analysis/explain`,
+  `POST /api/v1/health/query`.
 - FastAPI returns predictable structured JSON validated with Pydantic.
 
 ## Laravel API (v1)
@@ -96,7 +97,7 @@ Statuses are stored as string enums:
 | GET  | `/api/v1/health/timeline` | token | Recent health events |
 | GET  | `/api/v1/health/record` | token | Aggregated personal health record |
 | GET  | `/api/v1/medications` | token | User's medications |
-| POST | `/api/v1/assistant/chat` | token | AI assistant chat (throttled) |
+| POST | `/api/v1/health/query` | token | AI assistant — structured health-intelligence answer (throttled) |
 | GET  | `/api/v1/plan` | token | Current plan summary |
 | POST | `/api/v1/plan/upgrade` | token | Upgrade to Pro (audited) |
 | POST | `/api/v1/plan/cancel` | token | Cancel subscription (audited) |
@@ -173,6 +174,45 @@ partners and (on explicit grant) clinicians via the same service.
 `GET /api/v1/api-docs` serves `backend/resources/api/openapi.json` (OpenAPI 3.0),
 documenting the partner-facing endpoints plus account, plan, and notification routes.
 
+## Health Intelligence Layer (AI assistant)
+
+`POST /api/v1/health/query` answers a natural-language question about the user's
+own health data. It is a split-brain orchestrator: deterministic computation and
+ownership live in Laravel; explanation lives in FastAPI.
+
+### Laravel side (deterministic brain)
+
+- `HealthQueryService` — orchestrator with a handler map keyed by intent.
+- `IntentRegistry` / `IntentDefinition` — deterministic regex intent detection
+  (no LLM routing) and per-intent `requires_rag` flags.
+- Deterministic services: `ReportComparisonService`, `LabTrendEngine`,
+  `MedicationAtDateResolver`, `RecentHealthChangesService`.
+- `HealthContextService` — lazy, user-scoped context retrieval. Only the sections
+  the detected intent needs are computed and sent (never the full history).
+- `FastApiClient::healthQuery()` sends the structured context to FastAPI.
+- Route is authenticated (Sanctum), throttled (`health-query`, 10/min), and the
+  returned answer is wrapped as `{ query_id, intent, answer }`.
+
+### FastAPI side (explanation layer)
+
+- `POST /api/v1/health/query` (service-key auth) → `HealthIntelligenceService`.
+- Adds trusted knowledge only when needed: `GENERAL_HEALTH_QUESTION` always, plus
+  any test names found in the structured sections (RAG grounding, never invented).
+- Calls the LLM gateway with `task="health_query"` and `HealthQueryResponse` as
+  the strict Pydantic schema (malformed output is rejected at the boundary).
+- Safety gates: urgent-hint questions are deferred without the LLM; missing
+  required data returns a deterministic "unavailable" answer without the LLM;
+  `sources` come only from the curated store and `data_used` is echoed from the
+  request; facts/changes referencing unknown tests or invented numbers are
+  dropped; empty output falls back to a deterministic summary.
+
+### Frontend
+
+`/assistant` view under the AI Assistant nav group: a chat where each question
+gets a sectioned answer (summary, what the data shows, what changed, in-context
+notes, learn more, questions for your clinician, data used, sources,
+disclaimer), plus suggested questions and a loading state.
+
 ## Document processing pipeline (Milestone 2–4)
 
 Upload → validate (MIME + size) → store privately → create `medical_documents`
@@ -200,6 +240,7 @@ test), and committed before the next begins.
 | 9 | Clinician portal | Roles, explicit grants, clinician record access, audit events | ✅ Done |
 | 10 | Provider integration + API platform | OAuth client credentials, patient consents, consent-scoped partner access, OpenAPI docs | ✅ Done |
 | 11 | Plans, notifications & responsive UI | Free/Pro plans, in-app notifications, SaaS-style responsive shell | ✅ Done |
+| 12 | Health Intelligence Layer | AI assistant: intent registry + deterministic services + FastAPI health-query layer + `/assistant` chat frontend | ✅ Done |
 
 Suggested commit sequence (used so far, to be continued):
 
@@ -216,6 +257,8 @@ feat: add medications & AI assistant          ✅
 feat: add personal health record              ✅
 feat: add clinician portal                    ✅
 feat: add provider integration & API docs     ✅
+feat: add plans, notifications, responsive UI  ✅
+feat: add health intelligence layer           ✅
 feat: add plans, notifications & responsive UI ✅
 test: add document processing tests           ✅
 docs: add project documentation               ✅

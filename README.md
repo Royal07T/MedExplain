@@ -17,7 +17,10 @@ separated from medical advice.
 - Lab trends and a health timeline across uploaded reports.
 - Personal health record: the latest result per lab test, medications, and a
   recent-events timeline in one view.
-- AI assistant grounded in the user's own medications and health context.
+- AI assistant: one chat entry point grounded in your own reports, labs, and
+  medications. Ask a natural-language question and get a structured, grounded
+  answer covering the data, changes, education, and questions for your clinician —
+  powered by deterministic backend intelligence plus the AI service.
 - Clinician portal: role-based access (patient/clinician) with explicit,
   audited patient grants — clinicians only ever see consented patients.
 - Provider (partner) integration: OAuth 2.0 client credentials, patient-managed
@@ -78,7 +81,7 @@ php artisan key:generate
 # point DB_* at your MySQL, or set DB_CONNECTION=sqlite for quick local runs
 php artisan migrate
 php artisan serve --port=8000
-php artisan test        # 116 tests, 403 assertions
+php artisan test        # 176 tests, 589 assertions
 ```
 
 ### 2. AI service
@@ -88,7 +91,7 @@ cd ai-service
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"          # optional OCR: pip install -e ".[dev,ocr]" + tesseract
 uvicorn app.main:app --port 8001
-pytest                        # 101 tests
+pytest                        # 107 tests
 ```
 
 Set `FASTAPI_BASE_URL=http://127.0.0.1:8001` and a shared
@@ -106,7 +109,7 @@ model id.
 cd frontend
 npm install
 npm run dev            # http://localhost:5173 (proxies /api to :8000)
-npm run build && npm test   # 58 tests
+npm run build && npm test   # 59 tests
 ```
 
 For local queue processing (required to see results), either set

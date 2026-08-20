@@ -57,7 +57,11 @@ class StubProvider(LLMProvider):
         model: ChatModel,
     ) -> ChatResponse:
         return ChatResponse(
-            content="This is a stub response for development purposes. In production, a real LLM would provide a detailed answer based on the patient's labs and medications.",
+            content=(
+                f"[stub:{model.model}] This is a stub response for development "
+                "purposes. In production, a real LLM would provide a detailed answer "
+                "based on the patient's labs and medications."
+            ),
             model="stub"
         )
 
