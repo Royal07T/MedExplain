@@ -189,4 +189,12 @@ Milestones 1–6 and their verification steps are documented in
 
 ## License
 
-Proprietary — see repository owner.
+Owner - Timothy Jehwo<img width="1346" height="655" alt="Screenshot from 2026-08-20 01-09-55" src="https://github.com/user-attachments/assets/ca0dfbea-0357-4958-974d-f13764a0aa40" />
+<img width="1346" height="655" alt="Screenshot from 2026-08-20 01-10-06" src="https://github.com/user-attachments/assets/a48c73bb-dc90-4786-bfb5-35334222a1c1" />
+<img width="1346" height="655" alt="Screenshot from 2026-08-20 01-10-21" src="https://github.com/user-attachments/assets/2644dab7-fbdd-4315-91ff-a6fa96b1cedc" />
+<img width="1346" height="655" alt="Screenshot from 2026-08-20 01-10-29" src="https://github.com/user-attachments/assets/84c17da9-bb32-4751-803f-7200cb6cf585" />
+<img width="1346" height="655" alt="Screenshot from 2026-08-20 01-10-42" src="https://github.com/user-attachments/assets/4c8984f0-a3fe-4a84-9dbe-b8780e7a56d2" />
+<img width="1346" height="655" alt="Screenshot from 2026-08-20 01-10-51" src="https://github.com/user-attachments/assets/c9d37dbe-337e-41c8-9bbc-e45745d95bb1" />
+<img width="1346" height="655" alt="Screenshot from 2026-08-20 01-11-17" src="https://github.com/user-attachments/assets/fa8cb015-0a34-4a12-96d5-fbec2f437a0a" />
+<img width="1346" height="655" alt="Screenshot from 2026-08-20 01-11-41" src="https://github.com/user-attachments/assets/83ac6e71-074a-4435-ba54-fac646aa09f0" />
+.
