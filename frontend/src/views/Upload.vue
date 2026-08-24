@@ -23,8 +23,8 @@ async function submit() {
       progress.value = p
     })
     router.push({ name: 'reports.detail', params: { id: doc.id } })
-  } catch {
-    error.value = 'Upload failed. Please try again.'
+  } catch (err: any) {
+    error.value = err.message || 'Upload failed. Please try again.'
     uploading.value = false
   }
 }

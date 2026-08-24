@@ -8,7 +8,7 @@ vi.mock('@/api/auth', () => ({
 }))
 
 import { useAuthStore } from '@/stores/auth'
-import Sidebar from '@/components/Sidebar.vue'
+import NavbarMenu from '@/components/NavbarMenu.vue'
 import type { User } from '@/types'
 
 const RouterLinkStub = {
@@ -36,55 +36,62 @@ function makeUser(role: 'patient' | 'clinician', plan: 'free' | 'pro' = 'free'):
   }
 }
 
-function mountSidebar(role: 'patient' | 'clinician', plan: 'free' | 'pro' = 'free') {
+function mountNavbarMenu(role: 'patient' | 'clinician', plan: 'free' | 'pro' = 'free') {
   const pinia = createPinia()
   const auth = useAuthStore(pinia)
   auth.setAuth('token', makeUser(role, plan))
 
-  return mount(Sidebar, {
+  return mount(NavbarMenu, {
     global: {
       plugins: [pinia, buildRouter()],
       stubs: { RouterLink: RouterLinkStub },
+      components: { teleport: { template: '<div><slot /></div>' } },
     },
   })
 }
 
-describe('Sidebar', () => {
+describe('NavbarMenu', () => {
   it('renders grouped navigation sections', () => {
-    const wrapper = mountSidebar('patient')
+    const wrapper = mountNavbarMenu('patient')
 
     for (const label of ['Overview', 'Reports & Labs', 'Health', 'AI Assistant', 'Account']) {
       expect(wrapper.text()).toContain(label)
     }
-    for (const item of ['Dashboard', 'Reports', 'Trends', 'Timeline', 'Health record', 'Medications', 'Assistant', 'Profile', 'Settings', 'Connected apps']) {
+    for (const item of ['Dashboard', 'Reports', 'Trends', 'Timeline', 'Health Record', 'Medications', 'Assistant', 'Profile', 'Settings', 'Connected Apps']) {
       expect(wrapper.text()).toContain(item)
     }
   })
 
   it('hides the clinician portal for patients', () => {
-    const wrapper = mountSidebar('patient')
-    expect(wrapper.text()).not.toContain('Clinician portal')
+    const wrapper = mountNavbarMenu('patient')
+    expect(wrapper.text()).not.toContain('Care Team')
   })
 
   it('shows the clinician portal for clinicians', () => {
-    const wrapper = mountSidebar('clinician')
-    expect(wrapper.text()).toContain('Clinician portal')
+    const wrapper = mountNavbarMenu('clinician')
+    expect(wrapper.text()).toContain('Care Team')
+    expect(wrapper.text()).toContain('Clinician Portal')
   })
 
   it('shows the signed-in user', () => {
-    const wrapper = mountSidebar('patient')
+    const wrapper = mountNavbarMenu('patient')
     expect(wrapper.text()).toContain('Ada Lovelace')
     expect(wrapper.text()).toContain('ada@example.com')
-    expect(wrapper.find('button[aria-label="Log out"]').exists()).toBe(false)
   })
 
   it('shows the free plan for a free user', () => {
-    const wrapper = mountSidebar('patient', 'free')
+    const wrapper = mountNavbarMenu('patient', 'free')
     expect(wrapper.text()).toContain('Free plan')
   })
 
   it('shows the pro plan for a subscribed user', () => {
-    const wrapper = mountSidebar('patient', 'pro')
+    const wrapper = mountNavbarMenu('patient', 'pro')
     expect(wrapper.text()).toContain('Pro plan')
+  })
+
+  it('shows logout button', () => {
+    const wrapper = mountNavbarMenu('patient')
+    const logoutButton = wrapper.findAll('button').find(btn => btn.text().includes('Log out'))
+    expect(logoutButton).toBeDefined()
   })
 })

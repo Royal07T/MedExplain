@@ -19,16 +19,25 @@ export async function uploadDocument(
   const form = new FormData()
   form.append('file', file)
 
-  const { data } = await apiClient.post<Document>('/documents', form, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-    onUploadProgress: (event) => {
-      if (onProgress && event.total) {
-        onProgress(Math.round((event.loaded / event.total) * 100))
-      }
-    },
-  })
+  try {
+    const { data } = await apiClient.post<Document>('/documents', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: (event) => {
+        if (onProgress && event.total) {
+          onProgress(Math.round((event.loaded / event.total) * 100))
+        }
+      },
+    })
 
-  return data
+    return data
+  } catch (error: any) {
+    if (error.response?.status === 422 && error.response?.data?.errors) {
+      const validationErrors = error.response.data.errors
+      const errorMessage = Object.values(validationErrors).flat().join('. ')
+      throw new Error(errorMessage || 'Upload failed due to validation errors')
+    }
+    throw error
+  }
 }
 
 export async function deleteDocument(id: number): Promise<void> {

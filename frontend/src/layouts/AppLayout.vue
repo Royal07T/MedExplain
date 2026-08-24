@@ -3,15 +3,18 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 import { useNotificationsStore } from '@/stores/notifications'
+import { useSearch } from '@/composables/useSearch'
 import type { AppNotification } from '@/types'
-import Sidebar from '@/components/Sidebar.vue'
+import type { SearchResult } from '@/composables/useSearch'
+import NavbarMenu from '@/components/NavbarMenu.vue'
 
 const route = useRoute()
 const router = useRouter()
-const { logout } = useAuth()
+const { user, logout, isAuthenticated } = useAuth()
 
 const notifications = useNotificationsStore()
 const notificationsOpen = ref(false)
+const menuOpen = ref(false)
 let pollTimer: ReturnType<typeof setInterval> | undefined
 
 const pageTitle = computed(() => {
@@ -33,28 +36,38 @@ const pageTitle = computed(() => {
   return titles[route.name as string] || 'Dashboard'
 })
 
-const sidebarOpen = ref(false)
+const {
+  query: searchQuery,
+  results: searchResults,
+  loading: searchLoading,
+  open: searchOpen,
+  selectedIndex: searchSelectedIndex,
+  hasResults: searchHasResults,
+  handleInput: handleSearchInput,
+  handleFocus: handleSearchFocus,
+  handleBlur: handleSearchBlur,
+  handleKeydown: handleSearchKeydown,
+  selectResult: selectSearchResult,
+  close: closeSearch,
+} = useSearch()
 
-function toggleSidebar() {
-  sidebarOpen.value = !sidebarOpen.value
+function closeMenu() {
+  menuOpen.value = false
 }
 
-function closeSidebar() {
-  sidebarOpen.value = false
+function closeNotifications() {
+  notificationsOpen.value = false
 }
-
-watch(
-  () => route.fullPath,
-  () => closeSidebar(),
-)
-
-watch(sidebarOpen, (open) => {
-  document.body.style.overflow = open ? 'hidden' : ''
-})
 
 async function handleLogout() {
   await logout()
   router.push({ name: 'login' })
+}
+
+function toggleMenu(e: Event) {
+  e.preventDefault()
+  e.stopPropagation()
+  menuOpen.value = !menuOpen.value
 }
 
 function toggleNotifications() {
@@ -62,10 +75,6 @@ function toggleNotifications() {
   if (notificationsOpen.value) {
     notifications.fetchNotifications()
   }
-}
-
-function closeNotifications() {
-  notificationsOpen.value = false
 }
 
 async function handleMarkAllRead() {
@@ -88,6 +97,23 @@ function formatNotificationTime(iso: string): string {
   })
 }
 
+function handleKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') {
+    closeMenu()
+    closeNotifications()
+    closeSearch()
+  }
+}
+
+function handleSearchInputEvent(e: Event) {
+  const target = e.target as HTMLInputElement
+  handleSearchInput(target.value)
+}
+
+function handleSearchResultClick(result: SearchResult) {
+  selectSearchResult(result)
+}
+
 onMounted(async () => {
   try {
     await notifications.refreshUnreadCount()
@@ -97,85 +123,28 @@ onMounted(async () => {
   pollTimer = setInterval(() => {
     notifications.refreshUnreadCount().catch(() => {})
   }, 30000)
+
+  document.addEventListener('keydown', handleKeydown)
 })
 
 onUnmounted(() => {
   if (pollTimer) clearInterval(pollTimer)
+  document.removeEventListener('keydown', handleKeydown)
+})
+
+watch(() => route.fullPath, () => {
+  closeMenu()
+  closeNotifications()
+  closeSearch()
 })
 </script>
 
 <template>
   <div class="min-h-screen bg-slate-50">
-    <!-- Desktop sidebar -->
-    <aside class="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-slate-200 bg-white lg:block">
-      <Sidebar />
-    </aside>
-
-    <!-- Mobile drawer -->
-    <teleport to="body">
-      <transition
-        enter-active-class="transition-opacity duration-200 ease-out"
-        leave-active-class="transition-opacity duration-150 ease-in"
-        enter-from-class="opacity-0"
-        enter-to-class="opacity-100"
-        leave-from-class="opacity-100"
-        leave-to-class="opacity-0"
-      >
-        <div
-          v-if="sidebarOpen"
-          class="fixed inset-0 z-40 bg-slate-900/50 lg:hidden"
-          aria-hidden="true"
-          @click="closeSidebar"
-        ></div>
-      </transition>
-
-      <transition
-        enter-active-class="transition-transform duration-200 ease-out"
-        leave-active-class="transition-transform duration-150 ease-in"
-        enter-from-class="-translate-x-full"
-        enter-to-class="translate-x-0"
-        leave-from-class="translate-x-0"
-        leave-to-class="-translate-x-full"
-      >
-        <aside
-          v-if="sidebarOpen"
-          class="fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] border-r border-slate-200 bg-white shadow-xl lg:hidden"
-        >
-          <div class="flex h-full flex-col">
-            <div class="flex h-14 items-center justify-end border-b border-slate-200 px-4">
-              <button
-                type="button"
-                class="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
-                aria-label="Close navigation menu"
-                @click="closeSidebar"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div class="flex-1 overflow-y-auto">
-              <Sidebar />
-            </div>
-          </div>
-        </aside>
-      </transition>
-    </teleport>
-
-    <div class="flex min-h-screen flex-col lg:pl-64">
+    <div class="flex min-h-screen flex-col">
       <!-- Header -->
       <header class="sticky top-0 z-20 flex h-16 items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 sm:px-6">
         <div class="flex min-w-0 items-center gap-3">
-          <button
-            type="button"
-            class="shrink-0 rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 lg:hidden"
-            aria-label="Open navigation menu"
-            @click="toggleSidebar"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-            </svg>
-          </button>
           <h1 class="truncate text-lg font-semibold text-slate-900 sm:text-xl">{{ pageTitle }}</h1>
         </div>
 
@@ -183,12 +152,73 @@ onUnmounted(() => {
           <div class="relative hidden md:block">
             <input
               type="text"
-              placeholder="Search reports..."
+              placeholder="Search..."
+              :value="searchQuery"
+              @input="handleSearchInputEvent"
+              @focus="handleSearchFocus"
+              @blur="handleSearchBlur"
+              @keydown="handleSearchKeydown"
               class="w-56 rounded-lg border border-slate-200 py-2 pl-10 pr-3 text-sm focus:border-teal-500 focus:outline-none lg:w-64"
+              aria-autocomplete="list"
+              aria-controls="search-results"
+              :aria-expanded="searchOpen && searchHasResults ? 'true' : 'false'"
             />
-            <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
+
+            <teleport to="body">
+              <div
+                v-if="searchOpen && searchHasResults"
+                class="fixed inset-0 z-40"
+                aria-hidden="true"
+                @click="closeSearch"
+              ></div>
+              <div
+                v-if="searchOpen && searchHasResults"
+                id="search-results"
+                class="fixed top-16 z-50 w-64 max-w-[calc(100vw-2rem)] md:left-auto md:right-4 lg:right-20"
+              >
+                <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+                  <ul class="max-h-60 divide-y divide-slate-100 overflow-y-auto">
+                    <li
+                      v-if="searchLoading"
+                      class="px-4 py-8 text-center text-sm text-slate-400"
+                    >
+                      Searching…
+                    </li>
+                    <li v-for="(result, index) in searchResults" :key="result.id">
+                      <button
+                        type="button"
+                        class="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50"
+                        :class="{ 'bg-slate-50': index === searchSelectedIndex }"
+                        @click="handleSearchResultClick(result)"
+                        @mouseenter="searchSelectedIndex = index"
+                        role="option"
+                        :aria-selected="index === searchSelectedIndex"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          class="h-5 w-5 shrink-0 text-slate-400"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          aria-hidden="true"
+                        >
+                          <path stroke-linecap="round" stroke-linejoin="round" :d="result.icon" />
+                        </svg>
+                        <div class="min-w-0 flex-1 text-sm">
+                          <p class="truncate font-medium text-slate-900">{{ result.title }}</p>
+                          <p v-if="result.subtitle" class="truncate text-xs text-slate-500">{{ result.subtitle }}</p>
+                          <p class="truncate text-[11px] text-slate-400 capitalize">{{ result.type }}</p>
+                        </div>
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </teleport>
           </div>
           <div class="relative">
             <button
@@ -286,17 +316,57 @@ onUnmounted(() => {
               </div>
             </teleport>
           </div>
-          <button
-            type="button"
-            class="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-red-600"
-            aria-label="Log out"
-            title="Logout"
-            @click="handleLogout"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M5.636 5.636a9 9 0 1012.728 0M12 3v9" />
-            </svg>
-          </button>
+
+          <!-- User Menu Trigger -->
+          <div class="relative">
+            <button
+              type="button"
+              class="flex items-center gap-2 rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+              :aria-expanded="menuOpen"
+              :aria-haspopup="true"
+              aria-label="User menu"
+              @click="toggleMenu"
+            >
+              <div class="h-8 w-8 shrink-0 rounded-full bg-teal-100 flex items-center justify-center">
+                <img
+                  v-if="user?.profile?.avatar_url"
+                  :src="user.profile.avatar_url"
+                  :alt="`${user?.name ?? ''} profile picture`"
+                  class="h-full w-full rounded-full object-cover"
+                />
+                <svg
+                  v-else
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-5 w-5 text-teal-600"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  aria-hidden="true"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"
+                  />
+                </svg>
+              </div>
+              <span class="hidden sm:block truncate max-w-[160px] text-sm font-medium text-slate-700">{{ user?.name || 'User' }}</span>
+              <svg class="h-4 w-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+              </svg>
+            </button>
+
+            <teleport to="body">
+              <div
+                v-if="menuOpen"
+                class="fixed inset-0 z-40"
+                aria-hidden="true"
+                @click="menuOpen = false"
+              ></div>
+              <NavbarMenu v-if="menuOpen" @close="menuOpen = false" />
+            </teleport>
+          </div>
         </div>
       </header>
 
