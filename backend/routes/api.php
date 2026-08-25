@@ -51,6 +51,14 @@ Route::prefix('v1')->group(function (): void {
         Route::put('user', [UserController::class, 'update']);
         Route::post('user/avatar', [UserController::class, 'updateAvatar']);
 
+        Route::middleware('role:clinician')->prefix('clinician')->group(function (): void {
+            Route::post('lab-orders', [LabOrderController::class, 'store'])
+                ->middleware('throttle:api');
+            Route::get('lab-orders', [LabOrderController::class, 'index']);
+            Route::get('lab-orders/{id}', [LabOrderController::class, 'show']);
+            Route::post('lab-orders/{id}/status', [LabOrderController::class, 'updateStatus']);
+        });
+
         Route::middleware('throttle:api')->group(function (): void {
             Route::get('documents', [DocumentController::class, 'index']);
             Route::get('documents/{document}', [DocumentController::class, 'show']);
@@ -74,6 +82,28 @@ Route::prefix('v1')->group(function (): void {
             Route::get('notifications/unread-count', [NotificationController::class, 'unreadCount']);
             Route::post('notifications/read-all', [NotificationController::class, 'markAllRead']);
             Route::post('notifications/{notification}/read', [NotificationController::class, 'markRead']);
+
+            Route::prefix('billing')->group(function (): void {
+                Route::get('patient/{patientId}', [BillingController::class, 'index']);
+                Route::post('/', [BillingController::class, 'store']);
+                Route::post('{id}/pay', [BillingController::class, 'pay']);
+                Route::get('{id}', [BillingController::class, 'show']);
+            });
+
+            Route::prefix('inventory')->group(function (): void {
+                Route::get('/', [InventoryController::class, 'index']);
+                Route::post('{id}/quantity', [InventoryController::class, 'updateQuantity']);
+                Route::post('{id}/adjust', [InventoryController::class, 'adjust']);
+                Route::get('{id}', [InventoryController::class, 'show']);
+            });
+
+            Route::prefix('admin')->group(function (): void {
+                Route::get('organizations', [AdministrationController::class, 'organizations']);
+                Route::get('organizations/{organizationId}/departments', [AdministrationController::class, 'departments']);
+                Route::post('departments', [AdministrationController::class, 'storeDepartment']);
+                Route::post('users/{userId}/departments/{departmentId}', [AdministrationController::class, 'assignUser']);
+                Route::get('organizations/{id}', [AdministrationController::class, 'showOrganization']);
+            });
         });
 
         Route::post('documents', [DocumentController::class, 'store'])
@@ -109,3 +139,30 @@ Route::prefix('v1')->group(function (): void {
             Route::get('patients/{patient}/record', [PartnerDataController::class, 'record']);
         });
 });
+
+    Route::prefix('doctor')->group(function (): void {
+        Route::get('patient-360/{patientId}', [DoctorWorkspaceController::class, 'patient360']);
+        Route::post('patient/{patientId}/order-lab-test', [DoctorWorkspaceController::class, 'orderLabTest']);
+        Route::post('patient/{patientId}/start-encounter', [DoctorWorkspaceController::class, 'startEncounter']);
+        Route::get('triage-queue', [DoctorWorkspaceController::class, 'triageQueue']);
+
+        Route::middleware('role:clinician')->prefix('prescriptions')->group(function (): void {
+            Route::get('/', [PrescriptionController::class, 'index']);
+            Route::post('/', [PrescriptionController::class, 'store']);
+            Route::post('{id}/status', [PrescriptionController::class, 'updateStatus']);
+            Route::post('{id}/refill', [PrescriptionController::class, 'refillRequest']);
+            Route::get('{id}', [PrescriptionController::class, 'show']);
+        });
+
+        Route::middleware('auth:sanctum')->prefix('appointments')->group(function (): void {
+            Route::get('patient/{patientId}', [AppointmentController::class, 'index']);
+            Route::post('/', [AppointmentController::class, 'store']);
+            Route::post('{id}/check-in', [AppointmentController::class, 'checkIn']);
+            Route::post('{id}/status', [AppointmentController::class, 'updateStatus']);
+            Route::get('{id}', [AppointmentController::class, 'show']);
+        });
+
+        Route::get('patient/{patientId}/previous-encounters', [DoctorWorkspaceController::class, 'previousEncounters']);
+        Route::get('patient/{patientId}/vitals-trend', [DoctorWorkspaceController::class, 'vitalsTrend']);
+        Route::get('assigned-patients', [DoctorWorkspaceController::class, 'assignedPatients']);
+    });

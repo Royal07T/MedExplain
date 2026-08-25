@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'start_date',
     'end_date',
     'sort_order',
+    'status',
 ])]
 class Medication extends Model
 {
@@ -34,6 +35,7 @@ class Medication extends Model
             'start_date' => 'date',
             'end_date' => 'date',
             'sort_order' => 'integer',
+            'status' => MedicationStatus::class,
         ];
     }
 

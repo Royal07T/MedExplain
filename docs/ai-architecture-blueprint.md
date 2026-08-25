@@ -24,6 +24,14 @@ pillars) reuse one interface.
 No application code changes are part of this document. It is the reference for
 the phased implementation to follow.
 
+**Multi-tenancy note:** The AI service operates within the MEDEXPLAIN OS
+multi-tenant platform. All AI retrieval must be tenant-aware and
+permission-aware. The RAG system must never create a global vector database
+where documents from unrelated organizations can accidentally become
+retrievable. Every AI query inherits the authenticated user's organization,
+role, and patient access restrictions. Cross-tenant retrieval is a security
+violation and must be prevented at the retrieval layer.
+
 ---
 
 ## 2. Current state (as-built)
@@ -397,6 +405,7 @@ correlate an incident to a query without logging the user's health context.
 | # | Pillar | Core components required | Depends on |
 |---|---|---|---|
 | 1 | Report Explanation | Gateway + Lab Agent (shipped) | ✅ done |
+| 0 | Tenant Isolation & RBAC | Organizations, Users, Roles, Permissions, Tenant isolation middleware, Audit logging | ✅ In Progress (Phase 0) |
 | 2 | Medical Document Intelligence | Orchestrator, Document Agent, RAG | Gateway (P0) |
 | 3 | Lab Result Trends | Normalized lab_results + time-series query | #2 data model |
 | 4 | Personal Health Timeline | `health_events`, timeline endpoint | #3 |
@@ -476,6 +485,8 @@ preserves the security and safety constraints in Section 9.
 - **No secrets in code/config.** Keys only via environment; never logged.
 - **No document/test contents in logs, traces, or audit entries.**
 - **Service-to-service auth:** `X-Service-Key`, constant-time compare (unchanged).
+- **Tenant isolation:** Every AI retrieval must be scoped to the authenticated user's organization. No global vector database or unscoped retrieval is permitted.
+- **Cross-tenant prevention:** The RAG layer must explicitly filter retrieved documents by organization_id and patient access permissions. Cross-tenant data leakage is a critical security vulnerability.
 - **Ownership enforcement in Laravel** (policies) for every user-scoped endpoint.
 - **Medical safety:** never diagnose; never invent reference ranges (RAG is the
   only range source); always include the professional-consult disclaimer.
@@ -484,7 +495,7 @@ preserves the security and safety constraints in Section 9.
 - **Rate limiting** on auth and high-volume endpoints; OAuth + consent before any
   partner access (pillars #9–10).
 - **Audit logging** for security-sensitive actions (login, document deletion,
-  data export, partner consent).
+  data export, partner consent, AI access to patient data).
 
 ## 10. Non-goals (this blueprint)
 

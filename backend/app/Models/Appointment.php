@@ -1,0 +1,45 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+#[Fillable([
+    'patient_id',
+    'organization_id',
+    'clinician_id',
+    'status',
+    'acuity_level',
+    'chief_complaint',
+    'symptoms',
+    'check_in_time',
+    'check_out_time',
+    'duration_minutes',
+])]
+class Appointment extends Model
+{
+    protected function casts(): array
+    {
+        return [
+            'check_in_time' => 'datetime',
+            'check_out_time' => 'datetime',
+        ];
+    }
+
+    public function patient(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'patient_id');
+    }
+
+    public organization(): BelongsTo
+    {
+        return $this->belongsTo('App\Models\Organization');
+    }
+
+    public clinician(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'clinician_id');
+    }
+}

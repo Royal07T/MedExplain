@@ -17,7 +17,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'password', 'role', 'plan'])]
+#[Fillable(['name', 'email', 'password', 'role', 'plan', 'organization_id'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -33,6 +33,14 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * The organization the user belongs to.
+     */
+    public function organization(): BelongsTo
+    {
+        return $this->belongsTo(Organization::class);
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -44,6 +52,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'password' => 'hashed',
             'role' => UserRole::class,
             'plan' => Plan::class,
+            'organization_id' => Organization::class,
         ];
     }
 
