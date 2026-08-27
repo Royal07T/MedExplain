@@ -16,11 +16,12 @@ const notifications = useNotificationsStore()
 
 const sidebarOpen = ref(true)
 const notificationsOpen = ref(false)
+const isLoading = ref(true)
 let pollTimer: ReturnType<typeof setInterval> | undefined
 
 const navConfig = computed(() => {
   if (!role.value) return null
-  return workspaceNavConfigs[role.value]
+  return workspaceNavConfigs[role.value] || null
 })
 
 const workspaceBase = computed(() => {
@@ -28,7 +29,7 @@ const workspaceBase = computed(() => {
 })
 
 const commonNavItems = computed(() => {
-  const rolePrefix = role.value === 'patient' ? 'patient' : role.value === 'clinician' ? 'clinician' : role.value === 'nursing_staff' ? 'nursing' : role.value === 'admin' || role.value === 'super_admin' ? role.value : ''
+  const rolePrefix = role.value === 'patient' ? 'patient' : role.value === 'clinician' ? 'clinician' : role.value === 'nursing_staff' ? 'nursing' : role.value === 'admin' ? 'admin' : role.value === 'super_admin' ? 'superadmin' : ''
   return [
     { label: 'Profile', to: { name: `${rolePrefix}.profile` }, icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
     { label: 'Settings', to: { name: `${rolePrefix}.settings` }, icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
@@ -98,10 +99,22 @@ watch(() => route.fullPath, () => {
   closeNotifications()
   sidebarOpen.value = false
 })
+
+watch(() => role.value, (newRole) => {
+  if (newRole !== undefined) {
+    isLoading.value = false
+  }
+}, { immediate: true })
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-50">
+  <div v-if="isLoading" class="min-h-screen flex items-center justify-center bg-slate-50">
+    <div class="text-center">
+      <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-teal-600 border-r-transparent"></div>
+      <p class="mt-4 text-slate-600">Loading...</p>
+    </div>
+  </div>
+  <div v-else class="min-h-screen bg-slate-50">
     <div class="flex min-h-screen">
       <!-- Sidebar -->
       <aside

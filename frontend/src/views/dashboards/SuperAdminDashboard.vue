@@ -9,8 +9,9 @@ const error = ref('')
 onMounted(async () => {
   try {
     data.value = await fetchSuperAdminDashboard()
-  } catch (e) {
-    error.value = 'Failed to load dashboard'
+  } catch (e: any) {
+    console.error('Dashboard load error:', e)
+    error.value = e?.response?.data?.message || e?.message || 'Failed to load dashboard'
   } finally {
     loading.value = false
   }
