@@ -14,17 +14,21 @@ return new class extends Migration
     {
         Schema::create('lab_orders', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('organization_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('clinician_id')->constrained('users')->nullOnDelete();
+            $table->unsignedBigInteger('user_id');
+            $table->unsignedBigInteger('organization_id');
+            $table->unsignedBigInteger('clinician_id');
             $table->string('test_name', 255);
-            $table->string('test_code', 50)->nullable(); // LOINC or internal code
+            $table->string('test_code', 50)->nullable();
             $table->string('status', 50)->default(LabOrderStatus::Pending->value);
             $table->date('result_due_date')->nullable();
             $table->text('notes')->nullable();
             $table->timestamp('ordered_at')->useCurrent();
             $table->timestamp('result_received_at')->nullable();
             $table->timestamps();
+
+            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+            $table->foreign('organization_id')->references('id')->on('organizations')->cascadeOnDelete();
+            $table->foreign('clinician_id')->references('id')->on('users')->cascadeOnDelete();
 
             $table->index('user_id');
             $table->index('organization_id');

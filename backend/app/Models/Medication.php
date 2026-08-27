@@ -35,7 +35,7 @@ class Medication extends Model
             'start_date' => 'date',
             'end_date' => 'date',
             'sort_order' => 'integer',
-            'status' => MedicationStatus::class,
+            'status' => \App\Enums\MedicationStatus::class,
         ];
     }
 

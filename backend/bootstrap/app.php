@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnsureActivePartner;
 use App\Http\Middleware\EnsurePartnerScope;
+use App\Http\Middleware\EnsurePermission;
 use App\Http\Middleware\EnsureUserRole;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Foundation\Application;
@@ -19,9 +20,12 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'role' => EnsureUserRole::class,
+            'permission' => EnsurePermission::class,
             'partner' => EnsureActivePartner::class,
             'partner-scope' => EnsurePartnerScope::class,
         ]);
+        
+        $middleware->redirectGuestsTo(fn (Request $request) => $request->is('api/*') ? null : route('login'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

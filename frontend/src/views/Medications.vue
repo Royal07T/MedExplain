@@ -2,8 +2,10 @@
 import { onMounted } from 'vue'
 
 import { useMedicationsStore } from '@/stores/medications'
+import { useRoutePrefix } from '@/composables/useRoutePrefix'
 
 const medications = useMedicationsStore()
+const { routeName } = useRoutePrefix()
 
 onMounted(() => {
   void medications.fetch()
@@ -41,7 +43,7 @@ function details(med: { strength: string | null; dose: string | null; dosage_for
       <p class="text-base font-medium text-slate-700">No medications yet</p>
       <p class="mt-1">Medications are extracted automatically when you upload reports.</p>
       <router-link
-        :to="{ name: 'reports.upload' }"
+        :to="{ name: routeName('reports.upload') }"
         class="mt-4 inline-block rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700"
       >
         Upload a report
@@ -84,7 +86,7 @@ function details(med: { strength: string | null; dose: string | null; dosage_for
 
         <router-link
           v-if="med.medical_document_id"
-          :to="{ name: 'reports.detail', params: { id: med.medical_document_id } }"
+          :to="{ name: routeName('reports.detail'), params: { id: med.medical_document_id } }"
           class="mt-4 inline-block text-sm font-medium text-teal-700 hover:underline"
         >
           View source report

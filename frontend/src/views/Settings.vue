@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import Disclaimer from '@/components/Disclaimer.vue'
 import ToggleSwitch from '@/components/ToggleSwitch.vue'
 import { useAuth } from '@/composables/useAuth'
+import { useRoutePrefix } from '@/composables/useRoutePrefix'
 
 const SETTINGS_KEY = 'medexplain:settings'
 
@@ -17,6 +18,7 @@ interface SavedSettings {
 
 const { store: auth, isEmailVerified } = useAuth()
 const router = useRouter()
+const { routeName } = useRoutePrefix()
 
 const emailSummary = ref(true)
 const reportReady = ref(true)

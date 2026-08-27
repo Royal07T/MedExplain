@@ -28,6 +28,9 @@ final class AuthService
             'password' => $data['password'],
         ]);
 
+        // Assign default patient role via spatie/laravel-permission
+        $user->assignRole('patient');
+
         $user->profile()->create([
             'first_name' => $data['first_name'] ?? null,
             'last_name' => $data['last_name'] ?? null,
@@ -38,7 +41,7 @@ final class AuthService
         $this->auditService->record(AuditEvent::Register, $user);
 
         return [
-            'user' => new UserResource($user->load('profile')),
+            'user' => new UserResource($user->load('profile', 'roles')),
             'token' => $user->createToken('api')->plainTextToken,
         ];
     }
@@ -63,7 +66,7 @@ final class AuthService
         $this->auditService->record(AuditEvent::Login, $user);
 
         return [
-            'user' => new UserResource($user->load('profile')),
+            'user' => new UserResource($user->load('profile', 'roles')),
             'token' => $user->createToken('api')->plainTextToken,
         ];
     }

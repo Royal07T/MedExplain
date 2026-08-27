@@ -14,10 +14,10 @@ return new class extends Migration
     {
         Schema::create('prescriptions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('organization_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('clinician_id')->constrained('users')->nullOnDelete();
-            $table->foreignId('medication_id')->constrained()->nullOnDelete();
+            $table->unsignedBigInteger('user_id');
+            $table->unsignedBigInteger('organization_id');
+            $table->unsignedBigInteger('clinician_id');
+            $table->unsignedBigInteger('medication_id');
             $table->string('notes')->nullable();
             $table->enum('status', array_column(MedicationStatus::cases(), 'value'))
                 ->default(MedicationStatus::Prescribed->value);
@@ -25,6 +25,11 @@ return new class extends Migration
             $table->timestamp('dispensed_at')->nullable();
             $table->timestamp('ordered_at')->useCurrent();
             $table->timestamps();
+
+            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+            $table->foreign('organization_id')->references('id')->on('organizations')->cascadeOnDelete();
+            $table->foreign('clinician_id')->references('id')->on('users')->cascadeOnDelete();
+            $table->foreign('medication_id')->references('id')->on('medications')->cascadeOnDelete();
 
             $table->index('user_id');
             $table->index('organization_id');

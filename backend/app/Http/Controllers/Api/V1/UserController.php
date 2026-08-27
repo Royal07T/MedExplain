@@ -17,7 +17,7 @@ final class UserController extends Controller
      */
     public function show(Request $request): JsonResponse
     {
-        $user = $request->user()->load('profile');
+        $user = $request->user()->load('profile', 'roles');
 
         return response()->json([
             'user' => new UserResource($user),
@@ -47,7 +47,7 @@ final class UserController extends Controller
         );
 
         return response()->json([
-            'user' => new UserResource($user->load('profile')),
+            'user' => new UserResource($user->load('profile', 'roles')),
         ]);
     }
 
@@ -68,7 +68,7 @@ final class UserController extends Controller
         $profile->update(['avatar_path' => $path]);
 
         return response()->json([
-            'user' => new UserResource($user->load('profile')),
+            'user' => new UserResource($user->load('profile', 'roles')),
         ]);
     }
 }

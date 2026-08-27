@@ -2,8 +2,10 @@
 import { onMounted } from 'vue'
 
 import { useHealthStore } from '@/stores/health'
+import { useRoutePrefix } from '@/composables/useRoutePrefix'
 
 const health = useHealthStore()
+const { routeName } = useRoutePrefix()
 
 onMounted(() => {
   void health.fetchTimeline()
@@ -48,7 +50,7 @@ function styleFor(type: string) {
       <p class="text-base font-medium text-slate-700">No events yet</p>
       <p class="mt-1">Upload your first report to start building your health timeline.</p>
       <router-link
-        :to="{ name: 'reports.upload' }"
+        :to="{ name: routeName('reports.upload') }"
         class="mt-4 inline-block rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700"
       >
         Upload a report
@@ -78,7 +80,7 @@ function styleFor(type: string) {
               </span>
               <router-link
                 v-if="event.document_id"
-                :to="{ name: 'reports.detail', params: { id: event.document_id } }"
+                :to="{ name: routeName('reports.detail'), params: { id: event.document_id } }"
                 class="text-xs font-medium text-teal-700 hover:underline"
               >
                 View report

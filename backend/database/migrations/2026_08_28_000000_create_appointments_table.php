@@ -13,9 +13,9 @@ return new class extends Migration
     {
         Schema::create('appointments', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('patient_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('organization_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('clinician_id')->constrained('users')->nullOnDelete();
+            $table->unsignedBigInteger('patient_id');
+            $table->unsignedBigInteger('organization_id');
+            $table->unsignedBigInteger('clinician_id');
             $table->enum('status', ['scheduled', 'checked_in', 'in_progress', 'completed', 'cancelled', 'no_show'])->default('scheduled');
             $table->enum('acuity_level', ['resuscitation', 'emergent', 'urgent', 'non-urgent'])->default('non-urgent');
             $table->string('chief_complaint')->nullable();
@@ -24,6 +24,10 @@ return new class extends Migration
             $table->timestamp('check_out_time')->nullable();
             $table->integer('duration_minutes')->nullable();
             $table->timestamps();
+
+            $table->foreign('patient_id')->references('id')->on('patients')->cascadeOnDelete();
+            $table->foreign('organization_id')->references('id')->on('organizations')->cascadeOnDelete();
+            $table->foreign('clinician_id')->references('id')->on('users')->cascadeOnDelete();
 
             $table->index('patient_id');
             $table->index('organization_id');

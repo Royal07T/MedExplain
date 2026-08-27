@@ -16,13 +16,16 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Spatie\Permission\Traits\HasRoles;
 
 #[Fillable(['name', 'email', 'password', 'role', 'plan', 'organization_id'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
-    use HasApiTokens, HasFactory, MustVerifyEmailTrait, Notifiable;
+    use HasApiTokens, HasFactory, HasRoles, MustVerifyEmailTrait, Notifiable;
+
+    protected $guard_name = 'web';
 
     /**
      * The user's basic profile information.
@@ -52,7 +55,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'password' => 'hashed',
             'role' => UserRole::class,
             'plan' => Plan::class,
-            'organization_id' => Organization::class,
+            'organization_id' => 'integer',
         ];
     }
 
@@ -64,12 +67,40 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->plan === Plan::Pro;
     }
 
+    public function isPatient(): bool
+    {
+        return $this->role === UserRole::Patient;
+    }
+
     /**
      * Whether this user is a clinician.
      */
     public function isClinician(): bool
     {
         return $this->role === UserRole::Clinician;
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role === UserRole::Admin;
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->role === UserRole::SuperAdmin;
+    }
+
+    public function isNursingStaff(): bool
+    {
+        return $this->role === UserRole::NursingStaff;
+    }
+
+    /**
+     * Departments this staff member is assigned to.
+     */
+    public function departments(): BelongsToMany
+    {
+        return $this->belongsToMany(Department::class, 'user_department', 'user_id', 'department_id');
     }
 
     /**
@@ -86,5 +117,13 @@ class User extends Authenticatable implements MustVerifyEmail
     public function consents(): HasMany
     {
         return $this->hasMany(PatientConsent::class, 'patient_user_id');
+    }
+
+    /**
+     * Get all permissions (from roles) as a flat array for the frontend.
+     */
+    public function getAllPermissionsNames(): array
+    {
+        return $this->getAllPermissions()->pluck('name')->toArray();
     }
 }

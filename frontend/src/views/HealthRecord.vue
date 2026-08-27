@@ -3,10 +3,12 @@ import { onMounted, ref } from 'vue'
 
 import { getHealthRecord } from '@/api/health'
 import type { HealthRecord } from '@/types'
+import { useRoutePrefix } from '@/composables/useRoutePrefix'
 
 const record = ref<HealthRecord | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
+const { routeName } = useRoutePrefix()
 
 onMounted(async () => {
   try {
@@ -71,7 +73,7 @@ function formatDate(value: string | null): string {
         <div class="flex items-center justify-between">
           <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-400">Latest labs</h2>
           <router-link
-            :to="{ name: 'trends' }"
+            :to="{ name: routeName('trends') }"
             class="text-sm font-medium text-teal-700 hover:underline"
           >
             View trends
@@ -110,7 +112,7 @@ function formatDate(value: string | null): string {
         <div class="flex items-center justify-between">
           <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-400">Medications</h2>
           <router-link
-            :to="{ name: 'medications' }"
+            :to="{ name: routeName('medications') }"
             class="text-sm font-medium text-teal-700 hover:underline"
           >
             View all
@@ -146,7 +148,7 @@ function formatDate(value: string | null): string {
         <div class="flex items-center justify-between">
           <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-400">Recent activity</h2>
           <router-link
-            :to="{ name: 'timeline' }"
+            :to="{ name: routeName('timeline') }"
             class="text-sm font-medium text-teal-700 hover:underline"
           >
             View timeline

@@ -96,9 +96,9 @@ class DoctorWorkspaceController extends Controller
             ->get();
 
         // Group by acuity level
-        $ grouped = [];
+        $grouped = [];
         foreach (['resuscitation', 'emergent', 'urgent', 'non-urgent'] as $acuity) {
-            $ grouped[$acuity] = $queue->where('acuity_level', $acuity)->map(function ($enc) {
+            $grouped[$acuity] = $queue->where('acuity_level', $acuity)->map(function ($enc) {
                 return [
                     'id' => $enc->id,
                     'patient_id' => $enc->patient_id,
@@ -113,7 +113,7 @@ class DoctorWorkspaceController extends Controller
         }
 
         return $this->successResponse([
-            'triage_queue' => $ grouped,
+            'triage_queue' => $grouped,
             'total_waiting' => $queue->count(),
         ]);
     }
@@ -190,8 +190,8 @@ class DoctorWorkspaceController extends Controller
                     'queue_status' => $encounter->queue_status,
                     'check_in_time' => $encounter->check_in_time,
                     'check_out_time' => $encounter->check_out_time,
-                    'duration_minutes' => $encounter->check_out_time?
-                        ->diffInMinutes($encounter->check_in_time) : null,
+                    'duration_minutes' => $encounter->check_out_time
+                        ? $encounter->check_out_time->diffInMinutes($encounter->check_in_time) : null,
                     'vitals' => $encounter->vitals_summary,
                 ];
             }),
@@ -235,7 +235,7 @@ class DoctorWorkspaceController extends Controller
             'chief_complaint' => 'sometimes|string|max:500',
             'symptoms' => 'sometimes|string|max:1000',
             'acuity_level' => 'sometimes|in:resuscitation,emergent,urgent,non-urgent',
-        });
+        ]);
 
         if ($validator->fails()) {
             return $this->errorResponse('Validation failed', 400, $validator->errors());
@@ -331,8 +331,8 @@ class DoctorWorkspaceController extends Controller
                     'acuity_level' => $enc->acuity_level,
                     'check_in_time' => $enc->check_in_time,
                     'check_out_time' => $enc->check_out_time,
-                    'duration_minutes' => $enc->check_out_time?
-                        ->diffInMinutes($enc->check_in_time) : null,
+                    'duration_minutes' => $enc->check_out_time
+                        ? $enc->check_out_time->diffInMinutes($enc->check_in_time) : null,
                 ];
             }),
         ]);

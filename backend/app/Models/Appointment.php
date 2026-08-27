@@ -33,12 +33,12 @@ class Appointment extends Model
         return $this->belongsTo(User::class, 'patient_id');
     }
 
-    public organization(): BelongsTo
+    public function organization(): BelongsTo
     {
-        return $this->belongsTo('App\Models\Organization');
+        return $this->belongsTo(Organization::class);
     }
 
-    public clinician(): BelongsTo
+    public function clinician(): BelongsTo
     {
         return $this->belongsTo(User::class, 'clinician_id');
     }

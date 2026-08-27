@@ -2,8 +2,10 @@
 import { computed, onMounted } from 'vue'
 
 import { useReportsStore } from '@/stores/reports'
+import { useRoutePrefix } from '@/composables/useRoutePrefix'
 
 const reports = useReportsStore()
+const { routeName } = useRoutePrefix()
 
 const recent = computed(() => reports.documents.slice(0, 3))
 
@@ -84,7 +86,7 @@ onMounted(() => {
       <div class="lg:col-span-2 rounded-xl border border-slate-200 bg-white shadow-sm">
         <div class="flex items-center justify-between border-b border-slate-200 p-5">
           <h2 class="text-lg font-semibold text-slate-900">Recent Reports</h2>
-          <router-link :to="{ name: 'reports' }" class="text-sm font-medium text-teal-700 hover:underline">
+          <router-link :to="{ name: routeName('reports') }" class="text-sm font-medium text-teal-700 hover:underline">
             View all
           </router-link>
         </div>
@@ -99,7 +101,7 @@ onMounted(() => {
           <p class="text-base font-medium text-slate-700">No reports yet</p>
           <p class="mt-1">Upload your first report to see a plain-language explanation.</p>
           <router-link
-            :to="{ name: 'reports.upload' }"
+            :to="{ name: routeName('reports.upload') }"
             class="mt-4 inline-block rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700"
           >
             Upload your first report
@@ -133,7 +135,7 @@ onMounted(() => {
                 </td>
                 <td class="px-5 py-4 text-right">
                   <router-link
-                    :to="{ name: 'reports.detail', params: { id: doc.id } }"
+                    :to="{ name: routeName('reports.detail'), params: { id: doc.id } }"
                     class="text-sm font-medium text-teal-700 hover:text-teal-900"
                   >
                     View
@@ -150,7 +152,7 @@ onMounted(() => {
         <h2 class="mb-4 text-lg font-semibold text-slate-900">Quick Actions</h2>
         <div class="space-y-2">
           <router-link
-            :to="{ name: 'reports.upload' }"
+            :to="{ name: routeName('reports.upload') }"
             class="flex items-center gap-3 rounded-lg border border-slate-200 p-4 text-sm font-medium text-slate-700 transition-colors hover:border-teal-400 hover:bg-teal-50 hover:text-teal-700"
           >
             <span class="rounded-md bg-teal-100 p-2.5 text-teal-700">
@@ -164,7 +166,7 @@ onMounted(() => {
             </div>
           </router-link>
           <router-link
-            :to="{ name: 'reports' }"
+            :to="{ name: routeName('reports') }"
             class="flex items-center gap-3 rounded-lg border border-slate-200 p-4 text-sm font-medium text-slate-700 transition-colors hover:border-teal-400 hover:bg-teal-50 hover:text-teal-700"
           >
             <span class="rounded-md bg-slate-100 p-2.5 text-slate-700">
@@ -178,7 +180,7 @@ onMounted(() => {
             </div>
           </router-link>
           <router-link
-            :to="{ name: 'trends' }"
+            :to="{ name: routeName('trends') }"
             class="flex items-center gap-3 rounded-lg border border-slate-200 p-4 text-sm font-medium text-slate-700 transition-colors hover:border-teal-400 hover:bg-teal-50 hover:text-teal-700"
           >
             <span class="rounded-md bg-slate-100 p-2.5 text-slate-700">
@@ -193,7 +195,7 @@ onMounted(() => {
             </div>
           </router-link>
           <router-link
-            :to="{ name: 'timeline' }"
+            :to="{ name: routeName('timeline') }"
             class="flex items-center gap-3 rounded-lg border border-slate-200 p-4 text-sm font-medium text-slate-700 transition-colors hover:border-teal-400 hover:bg-teal-50 hover:text-teal-700"
           >
             <span class="rounded-md bg-slate-100 p-2.5 text-slate-700">
@@ -207,7 +209,7 @@ onMounted(() => {
             </div>
           </router-link>
           <router-link
-            :to="{ name: 'assistant' }"
+            :to="{ name: routeName('assistant') }"
             class="flex items-center gap-3 rounded-lg border border-slate-200 p-4 text-sm font-medium text-slate-700 transition-colors hover:border-teal-400 hover:bg-teal-50 hover:text-teal-700"
           >
             <span class="rounded-md bg-slate-100 p-2.5 text-slate-700">
@@ -221,7 +223,7 @@ onMounted(() => {
             </div>
           </router-link>
           <router-link
-            :to="{ name: 'profile' }"
+            :to="{ name: routeName('profile') }"
             class="flex items-center gap-3 rounded-lg border border-slate-200 p-4 text-sm font-medium text-slate-700 transition-colors hover:border-teal-400 hover:bg-teal-50 hover:text-teal-700"
           >
             <span class="rounded-md bg-slate-100 p-2.5 text-slate-700">
@@ -235,7 +237,7 @@ onMounted(() => {
             </div>
           </router-link>
           <router-link
-            :to="{ name: 'settings' }"
+            :to="{ name: routeName('settings') }"
             class="flex items-center gap-3 rounded-lg border border-slate-200 p-4 text-sm font-medium text-slate-700 transition-colors hover:border-teal-400 hover:bg-teal-50 hover:text-teal-700"
           >
             <span class="rounded-md bg-slate-100 p-2.5 text-slate-700">

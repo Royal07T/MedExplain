@@ -16,12 +16,16 @@ export interface UserProfile {
 
 export type Plan = 'free' | 'pro'
 
+export type UserRole = 'patient' | 'clinician' | 'nursing_staff' | 'admin' | 'super_admin'
+
 export interface User {
   id: number
   name: string
   email: string
-  role: 'patient' | 'clinician'
+  role: UserRole
   plan: Plan
+  organization_id: number | null
+  permissions: string[]
   email_verified_at: string | null
   created_at: string
   profile: UserProfile | null

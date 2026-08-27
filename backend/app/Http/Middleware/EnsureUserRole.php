@@ -7,18 +7,18 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Ensures the authenticated user has the required application role.
+ * Ensures the authenticated user has one of the required application roles.
  *
- * The middleware is intentionally strict: a missing or mismatched role
- * always fails closed with a 403, never falling back to another role.
+ * Accepts one or more role names. The user must have at least one of them.
+ * Always fails closed with a 403 if the user is missing or has no matching role.
  */
 final class EnsureUserRole
 {
-    public function handle(Request $request, Closure $next, string $role): Response
+    public function handle(Request $request, Closure $next, string ...$roles): Response
     {
         $user = $request->user();
 
-        if ($user === null || ! $user->isClinician() || $user->role->value !== $role) {
+        if ($user === null || ! $user->hasAnyRole($roles)) {
             abort(403, 'Forbidden.');
         }
 

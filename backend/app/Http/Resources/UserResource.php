@@ -20,7 +20,11 @@ class UserResource extends JsonResource
             'email' => $this->email,
             'role' => $this->role?->value ?? 'patient',
             'plan' => $this->plan?->value ?? 'free',
+            'organization_id' => $this->organization_id,
             'email_verified_at' => $this->email_verified_at?->toISOString(),
+            'permissions' => $this->whenLoaded('roles', function () {
+                return $this->getAllPermissionsNames();
+            }, []),
             'profile' => new ProfileResource($this->whenLoaded('profile')),
             'created_at' => $this->created_at?->toISOString(),
         ];

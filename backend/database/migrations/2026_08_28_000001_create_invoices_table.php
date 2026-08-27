@@ -13,9 +13,9 @@ return new class extends Migration
     {
         Schema::create('invoices', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('patient_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('organization_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('appointment_id')->nullable()->constrained()->nullOnDelete();
+            $table->unsignedBigInteger('patient_id');
+            $table->unsignedBigInteger('organization_id');
+            $table->unsignedBigInteger('appointment_id')->nullable();
             $table->string('invoice_number', 50)->unique();
             $table->decimal('amount', 12, 2);
             $table->decimal('paid_amount', 12, 2)->default(0);
@@ -27,6 +27,10 @@ return new class extends Migration
             $table->timestamp('due_at')->nullable();
             $table->timestamp('paid_at')->nullable();
             $table->timestamps();
+
+            $table->foreign('patient_id')->references('id')->on('patients')->cascadeOnDelete();
+            $table->foreign('organization_id')->references('id')->on('organizations')->cascadeOnDelete();
+            $table->foreign('appointment_id')->references('id')->on('appointments')->nullOnDelete();
 
             $table->index('patient_id');
             $table->index('organization_id');

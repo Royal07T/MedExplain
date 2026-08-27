@@ -30,6 +30,8 @@ function makeUser(role: 'patient' | 'clinician', plan: 'free' | 'pro' = 'free'):
     email: 'ada@example.com',
     role,
     plan,
+    organization_id: null,
+    permissions: [],
     email_verified_at: null,
     created_at: '2026-01-01T00:00:00Z',
     profile: null,

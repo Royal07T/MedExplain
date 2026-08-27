@@ -5,8 +5,10 @@ import { useRouter } from 'vue-router'
 import * as documentsApi from '@/api/documents'
 import Disclaimer from '@/components/Disclaimer.vue'
 import UploadDropzone from '@/components/UploadDropzone.vue'
+import { useRoutePrefix } from '@/composables/useRoutePrefix'
 
 const router = useRouter()
+const { routeName } = useRoutePrefix()
 
 const selected = ref<File | null>(null)
 const uploading = ref(false)
@@ -22,7 +24,7 @@ async function submit() {
     const doc = await documentsApi.uploadDocument(selected.value, (p) => {
       progress.value = p
     })
-    router.push({ name: 'reports.detail', params: { id: doc.id } })
+    router.push({ name: routeName('reports.detail'), params: { id: doc.id } })
   } catch (err: any) {
     error.value = err.message || 'Upload failed. Please try again.'
     uploading.value = false

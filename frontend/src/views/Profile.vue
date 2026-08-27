@@ -5,9 +5,11 @@ import LoadingState from '@/components/LoadingState.vue'
 import { cancelPlan, upgradePlan } from '@/api/plan'
 import { useAuth } from '@/composables/useAuth'
 import { useReportsStore } from '@/stores/reports'
+import { useRoutePrefix } from '@/composables/useRoutePrefix'
 
 const { store: auth, isEmailVerified } = useAuth()
 const reports = useReportsStore()
+const { routeName } = useRoutePrefix()
 
 const AVATAR_ACCEPT = 'image/jpeg,image/png,image/webp'
 const AVATAR_MAX_MB = 2
@@ -571,7 +573,7 @@ async function handleResendVerification() {
           </div>
 
           <router-link
-            :to="{ name: 'settings' }"
+            :to="{ name: routeName('settings') }"
             class="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-5 text-sm font-medium text-slate-700 shadow-sm transition hover:border-teal-400 hover:text-teal-700"
           >
             Manage account settings

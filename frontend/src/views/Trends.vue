@@ -3,8 +3,10 @@ import { computed, onMounted } from 'vue'
 
 import LineChart from '@/components/LineChart.vue'
 import { useHealthStore } from '@/stores/health'
+import { useRoutePrefix } from '@/composables/useRoutePrefix'
 
 const health = useHealthStore()
+const { routeName } = useRoutePrefix()
 
 onMounted(async () => {
   await health.fetchTestNames()
@@ -140,7 +142,7 @@ function statusLabel(status: string): string {
               <td class="py-3">
                 <router-link
                   v-if="point.document_id"
-                  :to="{ name: 'reports.detail', params: { id: point.document_id } }"
+                  :to="{ name: routeName('reports.detail'), params: { id: point.document_id } }"
                   class="text-teal-700 hover:underline"
                 >
                   {{ point.document_filename ?? 'View report' }}
@@ -160,7 +162,7 @@ function statusLabel(status: string): string {
       <p class="text-base font-medium text-slate-700">No trends yet</p>
       <p class="mt-1">Upload and analyze reports to start tracking lab values over time.</p>
       <router-link
-        :to="{ name: 'reports.upload' }"
+        :to="{ name: routeName('reports.upload') }"
         class="mt-4 inline-block rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700"
       >
         Upload a report
