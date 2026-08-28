@@ -55,6 +55,12 @@ class DatabaseSeeder extends Seeder
                 'role' => UserRole::NursingStaff,
                 'organization_id' => $organizationId,
             ],
+            [
+                'name' => 'Super Admin',
+                'email' => 'superadmin@example.com',
+                'role' => UserRole::SuperAdmin,
+                'organization_id' => $organizationId,
+            ],
         ];
 
         foreach ($users as $userData) {

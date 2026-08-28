@@ -124,6 +124,10 @@ Route::prefix('v1')->group(function (): void {
             Route::get('appointments/{id}', [AppointmentController::class, 'show'])->middleware('has.permission:own_appointments.view');
             Route::delete('appointments/{id}', [AppointmentController::class, 'patientCancelAppointment'])->middleware('throttle:api', 'has.permission:appointments.cancel');
 
+            // Clinicians (for booking)
+            Route::get('clinicians', [AppointmentController::class, 'patientClinicians'])->middleware('has.permission:own_appointments.view');
+            Route::get('available-clinicians', [AppointmentController::class, 'availableClinicians'])->middleware('has.permission:own_appointments.view');
+
             // Prescription Refills
             Route::get('prescription-refills', [PrescriptionRefillController::class, 'index'])->middleware('has.permission:own_medications.view');
             Route::post('prescription-refills', [PrescriptionRefillController::class, 'store'])->middleware('throttle:api', 'has.permission:prescriptions.create');

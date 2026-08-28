@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 
 import StatusBadge from '@/components/StatusBadge.vue'
 import type { Document } from '@/types'
 
 const props = defineProps<{ document: Document }>()
 const emit = defineEmits<{ delete: [id: number] }>()
+const route = useRoute()
 
 const sizeLabel = computed(() => {
   const kb = props.document.file_size / 1024
@@ -17,6 +19,14 @@ const typeLabel = computed(() => props.document.document_type.replace('_', ' '))
 const uploadedLabel = computed(() =>
   new Date(props.document.created_at).toLocaleDateString(),
 )
+
+const detailRouteName = computed(() => {
+  const routeName = route.name as string
+  if (routeName.startsWith('patient.')) return 'patient.reports.detail'
+  if (routeName.startsWith('clinician.')) return 'clinician.reports.detail'
+  if (routeName.startsWith('nursing.')) return 'nursing.reports.detail'
+  return 'patient.reports.detail'
+})
 </script>
 
 <template>
@@ -24,7 +34,7 @@ const uploadedLabel = computed(() =>
     <div class="flex items-start justify-between gap-4">
       <div class="min-w-0">
         <router-link
-          :to="{ name: 'reports.detail', params: { id: document.id } }"
+          :to="{ name: detailRouteName, params: { id: document.id } }"
           class="truncate font-medium text-slate-900 hover:text-teal-700"
         >
           {{ document.original_filename }}
@@ -42,7 +52,7 @@ const uploadedLabel = computed(() =>
 
     <div class="mt-3 flex gap-3 text-sm">
       <router-link
-        :to="{ name: 'reports.detail', params: { id: document.id } }"
+        :to="{ name: detailRouteName, params: { id: document.id } }"
         class="text-teal-700 hover:underline"
       >
         View

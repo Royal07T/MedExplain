@@ -41,8 +41,8 @@ ACTIONABLE, TRACEABLE INSIGHTS
 
 | Component | Technology | Port (Docker) | Purpose |
 |-----------|-----------|---------------|---------|
-| `frontend/` | Vue 3 + Vite + TS + Tailwind | 80 (nginx) | SPA, clinician/patient dashboards, portal |
-| `backend/` | Laravel 13 + PHP 8.3 | 9000 (php-fpm, internal) | REST API, auth, business logic, persistence |
+| `frontend/` | Vue 3 + Vite + TS + Tailwind | 80 (nginx) | SPA, clinician/patient dashboards, portal, user authentication UI |
+| `backend/` | Laravel 13 + PHP 8.3 | 9000 (php-fpm, internal) | REST API, auth, business logic, persistence, RBAC permissions |
 | `ai-service/` | FastAPI + Python 3.12 | 8000 (internal) | Extraction, lab parsing, LLM, RAG, intelligence |
 | `worker` | Laravel queue worker | — | Processes upload jobs asynchronously |
 | `db` | PostgreSQL 15 | 5432 (internal) | Primary relational database |

@@ -27,8 +27,11 @@ async function submit() {
 <template>
   <div class="flex min-h-screen items-center justify-center bg-slate-50 px-4">
     <div class="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
-      <h1 class="text-2xl font-bold text-teal-700">MedExplain</h1>
-      <p class="mt-1 text-sm text-slate-500">
+      <div class="flex justify-center">
+        <img src="/src/assets/logo.png" alt="MedExplain" class="h-16 w-16 object-contain" />
+      </div>
+      <h1 class="mt-4 text-center text-2xl font-bold text-teal-700">MedExplain</h1>
+      <p class="mt-1 text-center text-sm text-slate-500">
         Understand your medical reports, in plain language.
       </p>
 

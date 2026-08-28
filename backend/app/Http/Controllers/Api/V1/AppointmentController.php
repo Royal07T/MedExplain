@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 final class AppointmentController extends Controller
 {
@@ -290,8 +291,20 @@ final class AppointmentController extends Controller
      */
     public function patientBookAppointment(Request $request): JsonResponse
     {
+        $user = $request->user();
+        $organizationId = $user?->organization_id;
+
+        if (!$organizationId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No organization context',
+            ], 403);
+        }
+
         $validator = Validator::make($request->all(), [
-            'clinician_id' => ['required', 'exists:users,id'],
+            'clinician_id' => ['required', 'exists:users,id', Rule::exists('users', 'id')
+                ->where('role', 'clinician')
+                ->where('organization_id', $organizationId)],
             'chief_complaint' => ['required', 'string', 'max:500'],
             'symptoms' => ['sometimes', 'string', 'max:1000'],
             'scheduled_at' => ['required', 'date', 'after:now'],
@@ -304,16 +317,6 @@ final class AppointmentController extends Controller
                 'message' => 'Validation failed',
                 'errors' => $validator->errors(),
             ], 422);
-        }
-
-        $user = $request->user();
-        $organizationId = $user?->organization_id;
-
-        if (!$organizationId) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No organization context',
-            ], 403);
         }
 
         $appointment = Appointment::create([
@@ -339,6 +342,59 @@ final class AppointmentController extends Controller
                 'message' => 'Appointment booked successfully',
             ],
         ], 201);
+    }
+
+    /**
+     * Get clinicians assigned to the patient (via clinician_patient_access).
+     */
+    public function patientClinicians(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $organizationId = $user?->organization_id;
+
+        if (!$organizationId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No organization context',
+            ], 403);
+        }
+
+        $clinicians = User::where('role', 'clinician')
+            ->where('organization_id', $organizationId)
+            ->whereHas('clinicianPatients', function ($query) use ($user) {
+                $query->where('patient_user_id', $user->id);
+            })
+            ->get(['id', 'name', 'email']);
+
+        return response()->json([
+            'success' => true,
+            'data' => $clinicians,
+        ]);
+    }
+
+    /**
+     * Get all clinicians in the patient's organization.
+     */
+    public function availableClinicians(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $organizationId = $user?->organization_id;
+
+        if (!$organizationId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No organization context',
+            ], 403);
+        }
+
+        $clinicians = User::where('role', 'clinician')
+            ->where('organization_id', $organizationId)
+            ->get(['id', 'name', 'email']);
+
+        return response()->json([
+            'success' => true,
+            'data' => $clinicians,
+        ]);
     }
 
     /**

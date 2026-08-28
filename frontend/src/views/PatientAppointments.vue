@@ -1,10 +1,16 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { getMyAppointments, bookAppointment, cancelMyAppointment, type Appointment } from '@/api/appointments'
+import { getMyAppointments, bookAppointment, cancelMyAppointment, getMyClinicians, getAvailableClinicians, type Appointment, type ClinicianInfo } from '@/api/appointments'
 
 const appointments = ref<Appointment[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
+
+// Clinician state
+const myClinicians = ref<ClinicianInfo[]>([])
+const allClinicians = ref<ClinicianInfo[]>([])
+const loadingClinicians = ref(false)
+const showAllClinicians = ref(false)
 
 // Booking form state
 const showBookingForm = ref(false)
@@ -16,6 +22,29 @@ const bookingForm = ref({
   duration_minutes: 30,
 })
 const submitting = ref(false)
+
+// Load assigned clinicians on mount
+async function loadMyClinicians() {
+  loadingClinicians.value = true
+  try {
+    myClinicians.value = await getMyClinicians()
+  } catch {
+    // Silently fail - dropdown will still work with all clinicians
+  } finally {
+    loadingClinicians.value = false
+  }
+}
+
+// Lazy load all org clinicians
+async function loadAllClinicians() {
+  if (showAllClinicians.value) return
+  showAllClinicians.value = true
+  try {
+    allClinicians.value = await getAvailableClinicians()
+  } catch {
+    error.value = 'Failed to load clinicians'
+  }
+}
 
 // Load appointments on mount
 async function loadAppointments() {
@@ -84,6 +113,8 @@ async function submitBooking() {
     
     // Reset form
     showBookingForm.value = false
+    showAllClinicians.value = false
+    allClinicians.value = []
     bookingForm.value = {
       clinician_id: 0,
       chief_complaint: '',
@@ -116,6 +147,7 @@ function getStatusColor(status: Appointment['status']): string {
 
 // Initialize
 loadAppointments()
+loadMyClinicians()
 setDefaultDate()
 </script>
 
@@ -156,15 +188,33 @@ setDefaultDate()
         <form @submit.prevent="submitBooking" class="space-y-4">
           <div>
             <label class="mb-1 block text-sm font-medium text-slate-700">
-              Clinician ID
+              Select Clinician
             </label>
-            <input
+            <select
               v-model.number="bookingForm.clinician_id"
-              type="number"
               required
-              placeholder="Enter clinician ID"
-              class="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:border-teal-500 focus:outline-none"
-            />
+              class="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 focus:border-teal-500 focus:outline-none"
+            >
+              <option :value="0" disabled>Choose a clinician…</option>
+              <optgroup v-if="myClinicians.length > 0" label="My Clinicians">
+                <option v-for="clinician in myClinicians" :key="clinician.id" :value="clinician.id">
+                  {{ clinician.name }} ({{ clinician.email }})
+                </option>
+              </optgroup>
+              <optgroup v-if="showAllClinicians && allClinicians.length > 0" label="All Clinicians in Organization">
+                <option v-for="clinician in allClinicians" :key="clinician.id" :value="clinician.id">
+                  {{ clinician.name }} ({{ clinician.email }})
+                </option>
+              </optgroup>
+            </select>
+            <button
+              v-if="!showAllClinicians"
+              type="button"
+              @click="loadAllClinicians"
+              class="mt-2 text-xs text-teal-600 hover:text-teal-700"
+            >
+              Browse all clinicians in your organization →
+            </button>
           </div>
 
           <div>

@@ -66,3 +66,19 @@ export async function cancelMyAppointment(id: number): Promise<Appointment> {
   const { data } = await apiClient.delete<{ success: boolean; data: Appointment }>(`/patient/appointments/${id}`)
   return data.data
 }
+
+export interface ClinicianInfo {
+  id: number
+  name: string
+  email: string
+}
+
+export async function getMyClinicians(): Promise<ClinicianInfo[]> {
+  const { data } = await apiClient.get<{ success: boolean; data: ClinicianInfo[] }>('/patient/clinicians')
+  return data.data
+}
+
+export async function getAvailableClinicians(): Promise<ClinicianInfo[]> {
+  const { data } = await apiClient.get<{ success: boolean; data: ClinicianInfo[] }>('/patient/available-clinicians')
+  return data.data
+}

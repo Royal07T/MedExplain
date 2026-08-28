@@ -90,6 +90,8 @@ class OpenAICompatibleProvider(LLMProvider):
         model: ChatModel,
     ) -> ChatResponse:
         wire = await self._post(messages, model, json_mode=False)
+        if not wire.choices:
+            raise ProviderResponseError(f"{model.provider} returned a response with no choices")
         content = wire.choices[0].message.content
         usage = None
         if wire.usage is not None:
@@ -110,6 +112,8 @@ class OpenAICompatibleProvider(LLMProvider):
         response_schema: type[BaseModel],
     ) -> BaseModel:
         wire = await self._post(messages, model, json_mode=True)
+        if not wire.choices:
+            raise ProviderResponseError(f"{model.provider} returned a response with no choices")
         content = wire.choices[0].message.content
 
         try:
