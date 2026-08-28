@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\V1\ClinicalDecisionSupportController;
 use App\Http\Controllers\Api\V1\DocumentController;
 use App\Http\Controllers\Api\V1\FhirController;
 use App\Http\Controllers\Api\V1\TerminologyController;
+use App\Http\Controllers\Api\V1\WebhookController;
 use App\Http\Controllers\Api\V1\EmergencyDepartmentController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\HealthQueryController;
@@ -445,6 +446,17 @@ Route::prefix('v1')->group(function (): void {
                 Route::get('metadata', [FhirController::class, 'metadata']);
                 Route::get('Patient/{id}', [FhirController::class, 'patient']);
                 Route::get('Organization/{id}', [FhirController::class, 'organization']);
+            });
+
+            // Interoperability — Outbound webhook subscriptions & delivery
+            Route::prefix('webhooks')->middleware('role:admin,super_admin')->group(function (): void {
+                Route::get('/', [WebhookController::class, 'index'])->middleware('has.permission:webhooks.view');
+                Route::post('/', [WebhookController::class, 'store'])->middleware('throttle:api', 'has.permission:webhooks.manage');
+                Route::get('{id}', [WebhookController::class, 'show'])->middleware('has.permission:webhooks.view');
+                Route::put('{id}', [WebhookController::class, 'update'])->middleware('throttle:api', 'has.permission:webhooks.manage');
+                Route::delete('{id}', [WebhookController::class, 'destroy'])->middleware('has.permission:webhooks.manage');
+                Route::get('{id}/deliveries', [WebhookController::class, 'deliveries'])->middleware('has.permission:webhooks.view');
+                Route::post('{id}/deliver', [WebhookController::class, 'deliver'])->middleware('throttle:api', 'has.permission:webhooks.manage');
             });
         });
 

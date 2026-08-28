@@ -132,6 +132,10 @@ class PermissionSeeder extends Seeder
             'security.manage',
             'system_health.view',
             'integrations.manage',
+
+            // Integrations — outbound webhooks
+            'webhooks.view',
+            'webhooks.manage',
         ];
 
         // Create all permissions
@@ -224,6 +228,8 @@ class PermissionSeeder extends Seeder
             'reports.view',
             'analytics.view',
             'audit.view',
+            'webhooks.view',
+            'webhooks.manage',
         ]);
 
         // Super Admin role
@@ -244,6 +250,8 @@ class PermissionSeeder extends Seeder
             'security.manage',
             'system_health.view',
             'integrations.manage',
+            'webhooks.view',
+            'webhooks.manage',
             'audit.view',
             'reports.view',
             'analytics.view',

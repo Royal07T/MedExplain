@@ -252,6 +252,7 @@ This document outlines the strategic roadmap to transform MedExplain from a basi
   - Add comparison with prior studies
 - **Deliverables**: AI imaging integration, automated analysis, reporting assistance
 - **Success Metrics**: 40% improvement in radiologist productivity, improved detection rates
+- **Notes (implemented 2026-08, deterministic/offline subset)**: Deterministic imaging AI read for planned/resulted `ImagingOrder`s. ai-service exposes `POST /api/v1/imaging/analyze` (`schemas/imaging.py`, `services/ai/imaging_service.py`): stat/urgent/routine `recommendation` + `priority` derived from curated indication keyword groups and the stated priority; `radiation_dose` rec + confidence when dose > 20 mGy (any modality, fixed prior radial bug); `quality_hints`; `DISCLAIMER` from the LLM factory. Backend proxies via `FastApiClient::imagingAnalyze()` through `ClinicalAIController::analyzeImagingOrder()` (`POST /api/v1/clinician/ai/imaging/analyze`, org-scoped + `clinician_patient_access`, enum `->value` cast fix). Frontend adds an **Imaging AI** tab in `ClinicalAITools.vue` (patient/order selectors, priority badge, recommendations, quality hints). Tests: ai `tests/test_imaging.py` (10), backend `Phase53ImagingAIIntegrationSmokeTest` (5).
 
 #### 5.4 Virtual Health Assistant
 - **Current**: Basic AI assistant view exists
@@ -275,15 +276,16 @@ This document outlines the strategic roadmap to transform MedExplain from a basi
 - **Current**: Basic API structure
 - **Target**: Full healthcare interoperability
 - **Tasks**:
-  - Implement FHIR R4 endpoints
+  - ✅ Implement FHIR R4 read endpoints
   - Add HL7 message processing
   - Create NHS Spine integration
-  - Implement ICD-10/11 coding system
-  - Add SNOMED CT terminology
-  - Create API developer portal
-  - Implement webhook system for integrations
+  - ✅ Implement ICD-10/11 coding system (curated subset)
+  - ✅ Add SNOMED CT terminology (curated subset)
+  - Create API developer portal (future)
+  - ✅ Implement webhook system for integrations
 - **Deliverables**: FHIR implementation, HL7 integration, developer portal
 - **Success Metrics**: Successful integration with external systems, improved data exchange
+- **Notes (implemented 2026-08, deterministic/offline subset)**: (1) **Terminology + FHIR R4 read** — curated offline ICD-10 / SNOMED CT dictionaries behind `GET/POST /api/v1/terminology/*`, and spec-compliant FHIR R4 read endpoints (`/api/v1/fhir/metadata`, `/Patient/{id}`, `/Organization/{id}`) returning `application/fhir+json` OperationOutcome on misses, org-scoped. Tests in `Phase61InteroperabilitySmokeTest`. (2) **Outbound webhook subscription + delivery** — admin/super_admin org-scoped CRUD (`GET/POST /api/v1/webhooks`, `GET/PUT/DELETE /api/v1/webhooks/{id}`) with `webhooks.view`/`webhooks.manage` permissions; `WebhookService` signs each payload with HMAC-SHA256 (`X-Webhook-Signature` header) and records every attempt in `webhook_deliveries` (delivered/failed + http status + response). Test delivery via `POST /api/v1/webhooks/{id}/deliver` and audit trail via `GET .../{id}/deliveries`. Offline-tested with `Http::fake`. Routes/tests in `Phase61WebhookSmokeTest`.
 
 #### 6.2 Population Health
 - **Current**: None
@@ -295,10 +297,10 @@ This document outlines the strategic roadmap to transform MedExplain from a basi
   - Create epidemiological surveillance
   - ✅ Build health analytics platform
   - ✅ Implement risk stratification
-  - Add care gap identification
+  - ✅ Add care gap identification
 - **Deliverables**: Population health platform, disease registries, analytics
 - **Success Metrics**: Improved population health outcomes, better care coordination
-- **Notes (implemented 2026-08, deterministic/offline subset)**: Backend-only, organization-scoped population analytics. `App\Services\PopulationHealthService` computes three views in PHP over scoped collections (SQLite-safe, no MySQL-only SQL): **disease registry** (patients grouped by `ProblemList.icd10_code`, active/chronic only, distinct-patient counts), **risk stratification** (deterministic low/moderate/high tiers from active/chronic conditions, abnormal lab results, critical vitals, and age 65+ with contributing factors + summary), and **population dashboard** (total patients, gender + age-band breakdowns, patients-with-abnormal-labs + rate, top conditions, risk summary). `PopulationHealthController` exposes `GET /api/v1/population-health/dashboard`, `/registry`, `/risk` under `role:admin,super_admin,nursing_staff,clinician`. Admin/super_admin/nursing see the whole org; clinicians are scoped to their granted patients (`clinician_patient_access`). Tests in `Phase62PopulationHealthSmokeTest` (5). Public-health reporting, epidemiological surveillance, and care-gap identification remain future work.
+- **Notes (implemented 2026-08, deterministic/offline subset)**: Backend-only, organization-scoped population analytics. `App\Services\PopulationHealthService` computes views in PHP over scoped collections (SQLite-safe, no MySQL-only SQL): **disease registry** (patients grouped by `ProblemList.icd10_code`, active/chronic only, distinct-patient counts), **risk stratification** (deterministic low/moderate/high tiers from active/chronic conditions, abnormal lab results, critical vitals, and age 65+ with contributing factors + summary), **population dashboard** (total patients, gender + age-band breakdowns, patients-with-abnormal-labs + rate, top conditions, risk summary), and **care-gap identification** (`careGaps()`): diabetic monitoring (E08–E14 no HbA1c lab), hypertension monitoring (I10–I15 no BP vital), respiratory monitoring (J44–J45 no SpO2 vital), and care coordination (a chronic condition but no active `CarePlan`), each with human-readable descriptions + summary counts. `PopulationHealthController` exposes `GET /api/v1/population-health/dashboard`, `/registry`, `/risk`, `/care-gaps` under `role:admin,super_admin,nursing_staff,clinician`. Admin/super_admin/nursing see the whole org; clinicians are scoped to their granted patients (`clinician_patient_access`). Tests in `Phase62PopulationHealthSmokeTest` (9). Public-health reporting and epidemiological surveillance remain future work.
 
 
 
