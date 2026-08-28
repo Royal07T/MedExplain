@@ -15,6 +15,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'test_code',
     'status',
     'notes',
+    'result_value',
+    'result_unit',
+    'reference_range_low',
+    'reference_range_high',
+    'is_abnormal',
+    'explanation',
 ])]
 class LabOrder extends Model
 {

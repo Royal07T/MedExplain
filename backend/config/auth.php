@@ -44,7 +44,10 @@ return [
         ],
         'sanctum' => [
             'driver' => 'sanctum',
-            'provider' => 'users',
+            // No provider restriction: Sanctum bearer tokens are resolved
+            // directly from each token's `tokenable` model, which is either
+            // a User or an ApiPartner. Leaving the provider unset allows
+            // both to authenticate through the same guard.
         ],
     ],
 

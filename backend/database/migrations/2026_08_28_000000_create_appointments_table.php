@@ -25,7 +25,7 @@ return new class extends Migration
             $table->integer('duration_minutes')->nullable();
             $table->timestamps();
 
-            $table->foreign('patient_id')->references('id')->on('patients')->cascadeOnDelete();
+            $table->foreign('patient_id')->references('id')->on('users')->cascadeOnDelete();
             $table->foreign('organization_id')->references('id')->on('organizations')->cascadeOnDelete();
             $table->foreign('clinician_id')->references('id')->on('users')->cascadeOnDelete();
 

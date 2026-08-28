@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'check_in_time',
     'check_out_time',
     'duration_minutes',
+    'scheduled_at',
 ])]
 class Appointment extends Model
 {
@@ -25,6 +26,7 @@ class Appointment extends Model
         return [
             'check_in_time' => 'datetime',
             'check_out_time' => 'datetime',
+            'scheduled_at' => 'datetime',
         ];
     }
 

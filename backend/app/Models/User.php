@@ -44,6 +44,14 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * The Patient record associated with this auth user.
+     */
+    public function patient(): HasOne
+    {
+        return $this->hasOne(Patient::class);
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -125,5 +133,30 @@ class User extends Authenticatable implements MustVerifyEmail
     public function getAllPermissionsNames(): array
     {
         return $this->getAllPermissions()->pluck('name')->toArray();
+    }
+
+    /**
+     * Keep the Spatie role in sync with the legacy `role` column.
+     *
+     * The application exposes roles through both the `role` column (used by
+     * the isPatient()/isClinician() helpers and the user factory) and the
+     * Spatie permission system (used by the `role:` and `has.permission:`
+     * middlewares). Whenever a user is saved, assign the matching Spatie
+     * role so that both access paths agree.
+     */
+    protected static function booted(): void
+    {
+        static::saved(function (User $user): void {
+            $role = $user->role;
+            $roleName = $role instanceof UserRole ? $role->value : $role;
+
+            if (! is_string($roleName) || $roleName === '') {
+                return;
+            }
+
+            if (! $user->hasAnyRole([$roleName])) {
+                $user->assignRole($roleName);
+            }
+        });
     }
 }

@@ -21,7 +21,7 @@ class PatientContextController extends Controller
     public function select(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'patient_id' => 'required|exists:patients,id',
+            'patient_id' => 'required|exists:users,id',
         ]);
 
         $user = $request->user();

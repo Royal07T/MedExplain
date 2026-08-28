@@ -45,7 +45,7 @@ class AdminBillingController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'patient_id' => 'required|exists:patients,id',
+            'patient_id' => 'required|exists:users,id',
             'appointment_id' => 'nullable|exists:appointments,id',
             'amount' => 'required|numeric|min:0',
             'payment_method' => 'nullable|in:cash,card,insurance,bank_transfer,other',

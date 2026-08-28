@@ -28,7 +28,7 @@ return new class extends Migration
             $table->timestamp('paid_at')->nullable();
             $table->timestamps();
 
-            $table->foreign('patient_id')->references('id')->on('patients')->cascadeOnDelete();
+            $table->foreign('patient_id')->references('id')->on('users')->cascadeOnDelete();
             $table->foreign('organization_id')->references('id')->on('organizations')->cascadeOnDelete();
             $table->foreign('appointment_id')->references('id')->on('appointments')->nullOnDelete();
 

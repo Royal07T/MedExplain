@@ -61,6 +61,12 @@ final class LabOrderController extends Controller
                     'result_received_at' => $order->result_received_at?->toISOString(),
                     'notes' => $order->notes,
                     'clinician_name' => $order->clinician?->name,
+                    'result_value' => $order->result_value,
+                    'result_unit' => $order->result_unit,
+                    'reference_range_low' => $order->reference_range_low,
+                    'reference_range_high' => $order->reference_range_high,
+                    'is_abnormal' => $order->is_abnormal,
+                    'explanation' => $order->explanation,
                 ];
             }),
         ]);
@@ -141,6 +147,24 @@ final class LabOrderController extends Controller
      */
     public function updateStatus(Request $request, $id): JsonResponse
     {
+        $validator = Validator::make($request->all(), [
+            'status' => ['required', 'in:pending,ordered,collected,processing,completed,cancelled'],
+            'result_value' => ['sometimes', 'string'],
+            'result_unit' => ['sometimes', 'string'],
+            'reference_range_low' => ['sometimes', 'numeric'],
+            'reference_range_high' => ['sometimes', 'numeric'],
+            'is_abnormal' => ['sometimes', 'boolean'],
+            'explanation' => ['sometimes', 'string'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
         $organizationId = $request->user()?->organization_id;
 
         if (!$organizationId) {
@@ -163,20 +187,28 @@ final class LabOrderController extends Controller
             ], 403);
         }
 
-        $validator = Validator::make($request->all(), [
-            'status' => ['required', 'string', 'max:50'],
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
         $labOrder->status = $request->status;
         $labOrder->result_received_at = now();
+        
+        if ($request->has('result_value')) {
+            $labOrder->result_value = $request->result_value;
+        }
+        if ($request->has('result_unit')) {
+            $labOrder->result_unit = $request->result_unit;
+        }
+        if ($request->has('reference_range_low')) {
+            $labOrder->reference_range_low = $request->reference_range_low;
+        }
+        if ($request->has('reference_range_high')) {
+            $labOrder->reference_range_high = $request->reference_range_high;
+        }
+        if ($request->has('is_abnormal')) {
+            $labOrder->is_abnormal = $request->is_abnormal;
+        }
+        if ($request->has('explanation')) {
+            $labOrder->explanation = $request->explanation;
+        }
+        
         $labOrder->save();
 
         return response()->json([
@@ -185,6 +217,8 @@ final class LabOrderController extends Controller
                 'id' => $labOrder->id,
                 'status' => $labOrder->status,
                 'result_received_at' => $labOrder->result_received_at?->toISOString(),
+                'result_value' => $labOrder->result_value,
+                'explanation' => $labOrder->explanation,
             ],
             'message' => 'Lab order status updated successfully',
         ]);

@@ -218,4 +218,103 @@ final class BillingController extends Controller
             ],
         ]);
     }
+
+    /**
+     * Get patient's own invoices.
+     */
+    public function patientInvoices(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $organizationId = $user?->organization_id;
+
+        if (!$organizationId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No organization context',
+            ], 403);
+        }
+
+        $invoices = Invoice::where('patient_id', $user->id)
+            ->where('organization_id', $organizationId)
+            ->latest('issued_at')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $invoices->map(function ($invoice) {
+                return [
+                    'id' => $invoice->id,
+                    'invoice_number' => $invoice->invoice_number,
+                    'description' => $invoice->description,
+                    'amount' => $invoice->amount,
+                    'paid_amount' => $invoice->paid_amount,
+                    'status' => $invoice->status,
+                    'payment_method' => $invoice->payment_method,
+                    'issued_at' => $invoice->issued_at?->toISOString(),
+                    'due_at' => $invoice->due_at?->toISOString(),
+                    'paid_at' => $invoice->paid_at?->toISOString(),
+                    'notes' => $invoice->notes,
+                ];
+            }),
+        ]);
+    }
+
+    /**
+     * Patient makes a payment.
+     */
+    public function patientPay(Request $request, $id): JsonResponse
+    {
+        $user = $request->user();
+        $organizationId = $user?->organization_id;
+
+        if (!$organizationId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No organization context',
+            ], 403);
+        }
+
+        $invoice = Invoice::where('id', $id)
+            ->where('organization_id', $organizationId)
+            ->where('patient_id', $user->id)
+            ->firstOrFail();
+
+        $validator = Validator::make($request->all(), [
+            'paid_amount' => ['required', 'numeric', 'min:0', 'lte:' . $invoice->amount],
+            'payment_method' => ['required', 'in:cash,credit_card,transfer'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $invoice->paid_amount = $request->paid_amount;
+        $invoice->payment_method = $request->payment_method;
+
+        if ($request->paid_amount >= $invoice->amount) {
+            $invoice->status = 'paid';
+            $invoice->paid_at = now();
+        } elseif ($invoice->paid_amount > 0) {
+            $invoice->status = 'partial';
+        }
+
+        $invoice->save();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'id' => $invoice->id,
+                'amount' => $invoice->amount,
+                'paid_amount' => $invoice->paid_amount,
+                'status' => $invoice->status,
+                'paid_at' => $invoice->paid_at?->toISOString(),
+                'remaining' => $invoice->amount - $invoice->paid_amount,
+            ],
+            'message' => 'Payment recorded successfully',
+        ]);
+    }
 }

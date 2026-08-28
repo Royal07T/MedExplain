@@ -30,6 +30,16 @@ vi.mock('@/api/documents', () => ({
   deleteDocument: vi.fn(),
 }))
 
+vi.mock('@/api/dashboard', () => ({
+  fetchPatientDashboard: vi.fn().mockResolvedValue({
+    upcoming_appointments: [],
+    recent_labs: [],
+    medications: [],
+    recent_documents: [],
+    health_summary: { total_labs: 3, active_medications: 1, recent_documents: 2 },
+  }),
+}))
+
 import * as authApi from '@/api/auth'
 import App from '@/App.vue'
 import router from '@/router'
@@ -100,25 +110,28 @@ describe('login flow', () => {
     await wrapper.find('form').trigger('submit.prevent')
     await flushPromises()
 
-    await waitForRoute('dashboard')
+    await waitForRoute('patient.dashboard')
     const navigationFailure = await pushSpy.mock.results.at(-1)?.value
     expect(navigationFailure).toBeFalsy()
 
-    expect(wrapper.text()).toContain('Total Reports')
+    expect(wrapper.text()).toContain('Total Lab Results')
     expect(wrapper.text()).toContain('Quick Actions')
     wrapper.unmount()
   })
 
   it('redirects authenticated users away from the login page to the dashboard', async () => {
-    vi.mocked(authApi.fetchCurrentUser).mockResolvedValue(user)
-    localStorage.setItem('medexplain_token', 'test-token')
-
-    // A fresh pinia so the auth store re-reads the stored token.
+    // Ensure we start from a clean, unauthenticated location so the redirect
+    // below is a fresh navigation (not a redundant one to the same route).
     setActivePinia(createPinia())
+    await router.replace('/login?redirect=/dashboard')
+    expect(router.currentRoute.value.name).toBe('login')
+
+    localStorage.setItem('medexplain_token', 'test-token')
+    vi.mocked(authApi.fetchCurrentUser).mockResolvedValue(user)
 
     const navigation = await router.push('/login')
 
     expect(navigation).toBeFalsy()
-    expect(router.currentRoute.value.name).toBe('dashboard')
+    expect(router.currentRoute.value.name).toBe('patient.dashboard')
   })
 })

@@ -165,6 +165,70 @@ final class FastApiClient
     }
 
     /**
+     * Ask FastAPI to summarize a clinical note (extractive, offline).
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    public function nlpSummarize(array $payload): array
+    {
+        return $this->postJson('/api/v1/nlp/summarize', $payload);
+    }
+
+    /**
+     * Ask FastAPI to extract medications/diagnoses from free text.
+     *
+     * @return array<string, mixed>
+     */
+    public function nlpExtractConcepts(string $text): array
+    {
+        return $this->postJson('/api/v1/nlp/concepts', ['text' => $text]);
+    }
+
+    /**
+     * Ask FastAPI for lexicon-based sentiment of patient feedback.
+     *
+     * @return array<string, mixed>
+     */
+    public function nlpAnalyzeSentiment(string $text): array
+    {
+        return $this->postJson('/api/v1/nlp/sentiment', ['text' => $text]);
+    }
+
+    /**
+     * Ask FastAPI to estimate 30-day readmission risk (heuristic).
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    public function predictReadmission(array $payload): array
+    {
+        return $this->postJson('/api/v1/predictive/readmission', $payload);
+    }
+
+    /**
+     * Ask FastAPI to predict length of stay (heuristic).
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    public function predictLengthOfStay(array $payload): array
+    {
+        return $this->postJson('/api/v1/predictive/length-of-stay', $payload);
+    }
+
+    /**
+     * Ask FastAPI for an early-warning deterioration score from vitals.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    public function predictDeterioration(array $payload): array
+    {
+        return $this->postJson('/api/v1/predictive/deterioration', $payload);
+    }
+
+    /**
      * Check the FastAPI service health.
      *
      * @return array<string, mixed>
@@ -176,6 +240,25 @@ final class FastApiClient
                 ->withHeaders($this->headers())
                 ->timeout($this->timeout)
                 ->get('/api/v1/health');
+        });
+
+        return $this->decode($response);
+    }
+
+    /**
+     * POST JSON to the FastAPI service and return the decoded payload.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function postJson(string $path, array $payload): array
+    {
+        $response = $this->attempt(function () use ($path, $payload): Response {
+            return Http::baseUrl($this->baseUrl)
+                ->withHeaders($this->headers())
+                ->timeout($this->timeout)
+                ->asJson()
+                ->post($path, $payload);
         });
 
         return $this->decode($response);

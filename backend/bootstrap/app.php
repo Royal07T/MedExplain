@@ -4,6 +4,7 @@ use App\Http\Middleware\EnsureActivePartner;
 use App\Http\Middleware\EnsurePartnerScope;
 use App\Http\Middleware\EnsurePermission;
 use App\Http\Middleware\EnsureUserRole;
+use App\Http\Middleware\HasPermission;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -21,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => EnsureUserRole::class,
             'permission' => EnsurePermission::class,
+            'has.permission' => HasPermission::class,
             'partner' => EnsureActivePartner::class,
             'partner-scope' => EnsurePartnerScope::class,
         ]);

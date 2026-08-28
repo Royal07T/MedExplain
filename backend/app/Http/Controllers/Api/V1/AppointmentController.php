@@ -65,12 +65,14 @@ final class AppointmentController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'patient_id' => ['required', 'exists:users,user_id'],
+            'patient_id' => ['required', 'exists:users,id'],
             'clinician_id' => ['required', 'exists:users,id'],
             'status' => ['required', 'in:scheduled,checked_in,in_progress,completed,cancelled,no_show'],
             'acuity_level' => ['required', 'in:resuscitation,emergent,urgent,non-urgent'],
             'chief_complaint' => ['sometimes', 'string', 'max:500'],
             'symptoms' => ['sometimes', 'string', 'max:1000'],
+            'scheduled_at' => ['required', 'date', 'after:now'],
+            'duration_minutes' => ['sometimes', 'integer', 'min:15', 'max:240'],
         ]);
 
         if ($validator->fails()) {
@@ -109,7 +111,8 @@ final class AppointmentController extends Controller
             'acuity_level' => $request->acuity_level,
             'chief_complaint' => $request->chief_complaint,
             'symptoms' => $request->symptoms,
-            'scheduled_at' => now(),
+            'scheduled_at' => $request->scheduled_at,
+            'duration_minutes' => $request->duration_minutes ?? 30,
         ]);
 
         return response()->json([
@@ -120,6 +123,7 @@ final class AppointmentController extends Controller
                 'acuity_level' => $appointment->acuity_level,
                 'chief_complaint' => $appointment->chief_complaint,
                 'scheduled_at' => $appointment->scheduled_at?->toISOString(),
+                'duration_minutes' => $appointment->duration_minutes,
                 'message' => 'Appointment scheduled successfully',
             ],
         ], 201);
@@ -232,6 +236,7 @@ final class AppointmentController extends Controller
             'data' => [
                 'id' => $appointment->id,
                 'patient_id' => $appointment->patient_id,
+                'clinician_id' => $appointment->clinician_id,
                 'status' => $appointment->status,
                 'acuity_level' => $appointment->acuity_level,
                 'chief_complaint' => $appointment->chief_complaint,
@@ -240,6 +245,138 @@ final class AppointmentController extends Controller
                 'check_in_time' => $appointment->check_in_time?->toISOString(),
                 'check_out_time' => $appointment->check_out_time?->toISOString(),
                 'duration_minutes' => $appointment->duration_minutes,
+            ],
+        ]);
+    }
+
+    /**
+     * Get patient's own appointments.
+     */
+    public function patientAppointments(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $organizationId = $user?->organization_id;
+
+        if (!$organizationId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No organization context',
+            ], 403);
+        }
+
+        $appointments = Appointment::where('patient_id', $user->id)
+            ->where('organization_id', $organizationId)
+            ->latest('scheduled_at')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $appointments->map(function ($appointment) {
+                return [
+                    'id' => $appointment->id,
+                    'clinician_id' => $appointment->clinician_id,
+                    'status' => $appointment->status,
+                    'acuity_level' => $appointment->acuity_level,
+                    'chief_complaint' => $appointment->chief_complaint,
+                    'scheduled_at' => $appointment->scheduled_at?->toISOString(),
+                    'duration_minutes' => $appointment->duration_minutes,
+                ];
+            }),
+        ]);
+    }
+
+    /**
+     * Patient books an appointment.
+     */
+    public function patientBookAppointment(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'clinician_id' => ['required', 'exists:users,id'],
+            'chief_complaint' => ['required', 'string', 'max:500'],
+            'symptoms' => ['sometimes', 'string', 'max:1000'],
+            'scheduled_at' => ['required', 'date', 'after:now'],
+            'duration_minutes' => ['sometimes', 'integer', 'min:15', 'max:240'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $user = $request->user();
+        $organizationId = $user?->organization_id;
+
+        if (!$organizationId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No organization context',
+            ], 403);
+        }
+
+        $appointment = Appointment::create([
+            'patient_id' => $user->id,
+            'organization_id' => $organizationId,
+            'clinician_id' => $request->clinician_id,
+            'status' => 'scheduled',
+            'acuity_level' => 'non-urgent',
+            'chief_complaint' => $request->chief_complaint,
+            'symptoms' => $request->symptoms,
+            'scheduled_at' => $request->scheduled_at,
+            'duration_minutes' => $request->duration_minutes ?? 30,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'id' => $appointment->id,
+                'status' => $appointment->status,
+                'chief_complaint' => $appointment->chief_complaint,
+                'scheduled_at' => $appointment->scheduled_at?->toISOString(),
+                'duration_minutes' => $appointment->duration_minutes,
+                'message' => 'Appointment booked successfully',
+            ],
+        ], 201);
+    }
+
+    /**
+     * Patient cancels an appointment.
+     */
+    public function patientCancelAppointment(Request $request, $id): JsonResponse
+    {
+        $user = $request->user();
+        $organizationId = $user?->organization_id;
+
+        if (!$organizationId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No organization context',
+            ], 403);
+        }
+
+        $appointment = Appointment::where('id', $id)
+            ->where('organization_id', $organizationId)
+            ->where('patient_id', $user->id)
+            ->firstOrFail();
+
+        if ($appointment->status !== 'scheduled') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Can only cancel scheduled appointments',
+            ], 400);
+        }
+
+        $appointment->status = 'cancelled';
+        $appointment->save();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'id' => $appointment->id,
+                'status' => $appointment->status,
+                'message' => 'Appointment cancelled successfully',
             ],
         ]);
     }

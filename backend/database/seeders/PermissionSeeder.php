@@ -89,6 +89,10 @@ class PermissionSeeder extends Seeder
 
             // Appointments (admin)
             'appointments.manage',
+            'appointments.view',
+            'appointments.create',
+            'appointments.update',
+            'appointments.cancel',
 
             // Admissions
             'admissions.manage',
@@ -146,6 +150,8 @@ class PermissionSeeder extends Seeder
             'own_documents.view',
             'own_documents.upload',
             'own_appointments.view',
+            'appointments.create',
+            'appointments.cancel',
             'own_ai.query',
         ]);
 
@@ -172,6 +178,10 @@ class PermissionSeeder extends Seeder
             'documents.upload',
             'health_timeline.view',
             'ai.query',
+            'appointments.view',
+            'appointments.create',
+            'appointments.update',
+            'appointments.cancel',
         ]);
 
         // Nursing staff role

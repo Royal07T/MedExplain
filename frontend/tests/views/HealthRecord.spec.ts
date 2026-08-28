@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
+import { createPinia } from 'pinia'
 
 vi.mock('@/api/health', () => ({
   getHealthRecord: vi.fn(),
@@ -20,7 +21,7 @@ describe('HealthRecord', () => {
   it('renders profile, labs, medications, and timeline', async () => {
     vi.mocked(getHealthRecord).mockResolvedValue(record)
 
-    const wrapper = mount(HealthRecord)
+    const wrapper = mount(HealthRecord, { global: { plugins: [createPinia()] } })
     await flushPromises()
 
     expect(wrapper.text()).toContain('Ada Lovelace')
@@ -38,7 +39,7 @@ describe('HealthRecord', () => {
       timeline: [],
     })
 
-    const wrapper = mount(HealthRecord)
+    const wrapper = mount(HealthRecord, { global: { plugins: [createPinia()] } })
     await flushPromises()
 
     expect(wrapper.text()).toContain('No lab results recorded yet.')

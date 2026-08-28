@@ -12,11 +12,11 @@ class PatientContextService
     private const CACHE_TTL = 3600; // 1 hour
 
     /**
-     * Check if a user can access a specific patient.
+     * Check if a user can access a specific patient (referenced by user id).
      */
     public function canAccessPatient(User $user, int $patientId): bool
     {
-        $patient = Patient::find($patientId);
+        $patient = User::find($patientId);
 
         if (! $patient) {
             return false;
@@ -25,7 +25,7 @@ class PatientContextService
         // Clinician with access grant
         if ($user->isClinician()) {
             return $user->clinicianPatients()
-                ->where('patient_user_id', $patient->user_id)
+                ->where('patient_user_id', $patient->id)
                 ->exists();
         }
 
@@ -47,16 +47,17 @@ class PatientContextService
      */
     public function setContext(User $user, int $patientId): array
     {
-        $patient = Patient::with('user')->find($patientId);
+        $patient = User::with('patient')->find($patientId);
+        $record = $patient?->patient;
 
         $context = [
             'patient_id' => $patient->id,
-            'patient_user_id' => $patient->user_id,
-            'mrn' => $patient->mrn,
-            'full_name' => trim($patient->first_name . ' ' . $patient->last_name),
-            'date_of_birth' => $patient->date_of_birth?->toDateString(),
-            'gender' => $patient->gender,
-            'phone' => $patient->phone,
+            'patient_user_id' => $patient->id,
+            'mrn' => $record?->mrn,
+            'full_name' => $patient->name,
+            'date_of_birth' => $record?->date_of_birth?->toDateString(),
+            'gender' => $record?->gender,
+            'phone' => $record?->phone,
             'email' => $patient->email,
         ];
 
@@ -102,7 +103,7 @@ class PatientContextService
             ->limit(20)
             ->get()
             ->map(fn ($patient) => [
-                'id' => $patient->id,
+                'id' => $patient->user_id,
                 'user_id' => $patient->user_id,
                 'mrn' => $patient->mrn,
                 'full_name' => trim($patient->first_name . ' ' . $patient->last_name),
