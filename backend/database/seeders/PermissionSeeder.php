@@ -68,6 +68,12 @@ class PermissionSeeder extends Seeder
             'nursing_notes.view',
             'nursing_notes.create',
 
+            // Clinical notes
+            'clinical_notes.view',
+            'clinical_notes.create',
+            'clinical_notes.update',
+            'clinical_notes.delete',
+
             // Medication administration
             'medication_administration.view',
             'medication_administration.create',
@@ -75,6 +81,10 @@ class PermissionSeeder extends Seeder
             // Care plans
             'care_plans.view',
             'care_plans.create',
+
+            // Pharmacy
+            'pharmacy.view',
+            'pharmacy.manage',
 
             // Alerts
             'alerts.view',
@@ -157,6 +167,8 @@ class PermissionSeeder extends Seeder
             'appointments.create',
             'appointments.cancel',
             'own_ai.query',
+            'billing.view',
+            'billing.manage',
         ]);
 
         // Clinician role
@@ -186,6 +198,11 @@ class PermissionSeeder extends Seeder
             'appointments.create',
             'appointments.update',
             'appointments.cancel',
+            'clinical_notes.view',
+            'clinical_notes.create',
+            'clinical_notes.update',
+            'clinical_notes.delete',
+            'pharmacy.view',
         ]);
 
         // Nursing staff role

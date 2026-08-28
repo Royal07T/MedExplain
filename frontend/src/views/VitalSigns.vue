@@ -212,7 +212,7 @@ loadVitalSigns()
       Loading…
     </div>
     
-    <div v-else-if="vitalSigns.length === 0" class="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
+    <div v-else-if="!vitalSigns || vitalSigns.length === 0" class="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
       <p class="text-base font-medium text-slate-700">No vital signs recorded</p>
       <p class="mt-1">Start by recording the first set of vital signs.</p>
     </div>

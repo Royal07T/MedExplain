@@ -194,6 +194,7 @@ Route::prefix('v1')->group(function (): void {
             Route::get('patients', [ClinicianController::class, 'patients']);
             Route::post('patients', [ClinicianController::class, 'grantAccess'])->middleware('throttle:api');
             Route::get('patients/{patient}/record', [ClinicianController::class, 'record'])->middleware('throttle:api');
+            Route::get('patients/{patient}/problems', [ProblemListController::class, 'index'])->middleware('has.permission:patients.view');
 
             Route::post('lab-orders', [LabOrderController::class, 'store'])->middleware('throttle:api');
             Route::get('lab-orders', [LabOrderController::class, 'index']);
@@ -226,6 +227,22 @@ Route::prefix('v1')->group(function (): void {
             // Prescription Refills
             Route::get('prescription-refills', [PrescriptionRefillController::class, 'index'])->middleware('has.permission:medications.view');
             Route::put('prescription-refills/{id}', [PrescriptionRefillController::class, 'update'])->middleware('throttle:api', 'has.permission:prescriptions.update');
+
+            // Prescriptions
+            Route::get('patients/{patientId}/prescriptions', [PrescriptionController::class, 'index'])->middleware('has.permission:patients.view');
+            Route::post('prescriptions', [PrescriptionController::class, 'store'])->middleware('throttle:api', 'has.permission:prescriptions.create');
+            Route::put('prescriptions/{id}/status', [PrescriptionController::class, 'updateStatus'])->middleware('throttle:api', 'has.permission:prescriptions.update');
+            Route::get('prescriptions/{id}', [PrescriptionController::class, 'show'])->middleware('has.permission:patients.view');
+
+            // Pharmacy - Drug Inventory
+            Route::get('pharmacy/inventory', [PharmacyController::class, 'inventoryIndex'])->middleware('has.permission:pharmacy.view');
+            Route::post('pharmacy/inventory', [PharmacyController::class, 'inventoryStore'])->middleware('throttle:api', 'has.permission:pharmacy.manage');
+            Route::put('pharmacy/inventory/{id}', [PharmacyController::class, 'inventoryUpdate'])->middleware('throttle:api', 'has.permission:pharmacy.manage');
+
+            // Pharmacy - Formulary
+            Route::get('pharmacy/formulary', [PharmacyController::class, 'formularyIndex'])->middleware('has.permission:pharmacy.view');
+            Route::post('pharmacy/formulary', [PharmacyController::class, 'formularyStore'])->middleware('throttle:api', 'has.permission:pharmacy.manage');
+            Route::put('pharmacy/formulary/{id}', [PharmacyController::class, 'formularyUpdate'])->middleware('throttle:api', 'has.permission:pharmacy.manage');
 
             // Messaging
             Route::get('messages/conversations', [MessageController::class, 'conversations']);

@@ -19,7 +19,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('clinician_user_id')->constrained('users')->cascadeOnDelete();
             $table->foreignId('patient_user_id')->constrained('users')->cascadeOnDelete();
-            $table->unique(['clinician_user_id', 'patient_user_id']);
+            $table->unique(['clinician_user_id', 'patient_user_id'], 'clinician_patient_unique');
             $table->timestamps();
         });
     }

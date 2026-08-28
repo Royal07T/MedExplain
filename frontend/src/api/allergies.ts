@@ -25,20 +25,20 @@ export interface CreateAllergyRequest {
 }
 
 export async function getPatientAllergies(patientId: number): Promise<Allergy[]> {
-  const { data } = await apiClient.get<{ success: boolean; data: Allergy[] }>(`/clinician/patients/${patientId}/allergies`)
+  const { data } = await apiClient.get<{ success: boolean; data: Allergy[] }>(`/clinician/clinical/patients/${patientId}/allergies`)
   return data.data
 }
 
 export async function createAllergy(request: CreateAllergyRequest): Promise<Allergy> {
-  const { data } = await apiClient.post<{ success: boolean; data: Allergy }>('/clinician/allergies', request)
+  const { data } = await apiClient.post<{ success: boolean; data: Allergy }>('/clinician/clinical/allergies', request)
   return data.data
 }
 
 export async function updateAllergy(id: number, request: Partial<CreateAllergyRequest>): Promise<Allergy> {
-  const { data } = await apiClient.put<{ success: boolean; data: Allergy }>(`/clinician/allergies/${id}`, request)
+  const { data } = await apiClient.put<{ success: boolean; data: Allergy }>(`/clinician/clinical/allergies/${id}`, request)
   return data.data
 }
 
 export async function deleteAllergy(id: number): Promise<void> {
-  await apiClient.delete(`/clinician/allergies/${id}`)
+  await apiClient.delete(`/clinician/clinical/allergies/${id}`)
 }

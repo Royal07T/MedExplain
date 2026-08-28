@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { getConversations, getMessages, sendMessage, type Conversation, type Message, type SendMessageRequest } from '@/api/messages'
+import { useAuthStore } from '@/stores/auth'
+
+const auth = useAuthStore()
+const userRole = auth.user?.role || 'patient'
 
 const conversations = ref<Conversation[]>([])
 const selectedConversation = ref<Conversation | null>(null)
@@ -17,7 +21,7 @@ async function loadConversations() {
   loading.value = true
   error.value = null
   try {
-    conversations.value = await getConversations()
+    conversations.value = await getConversations(userRole)
   } catch {
     error.value = 'Failed to load conversations'
   } finally {
@@ -36,7 +40,7 @@ async function loadMessages(userId: number) {
   loading.value = true
   error.value = null
   try {
-    messages.value = await getMessages(userId)
+    messages.value = await getMessages(userId, userRole)
   } catch {
     error.value = 'Failed to load messages'
   } finally {
@@ -55,7 +59,7 @@ async function sendNewMessage() {
     await sendMessage({
       receiver_id: selectedConversation.value.user_id,
       content: newMessage.value,
-    })
+    }, userRole)
     
     newMessage.value = ''
     await loadMessages(selectedConversation.value.user_id)

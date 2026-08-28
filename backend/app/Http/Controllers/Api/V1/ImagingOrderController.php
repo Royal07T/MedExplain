@@ -29,7 +29,14 @@ final class ImagingOrderController extends Controller
 
         $patient = User::where('id', $patientId)
             ->where('organization_id', $organizationId)
-            ->firstOrFail();
+            ->first();
+
+        if (!$patient) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Patient not found',
+            ], 404);
+        }
 
         // Verify access - clinician must have this patient
         if (!$request->user()->isClinician() ||

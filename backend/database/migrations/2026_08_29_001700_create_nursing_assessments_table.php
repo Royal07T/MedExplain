@@ -33,7 +33,7 @@ return new class extends Migration
             $table->foreign('patient_id')->references('id')->on('users')->cascadeOnDelete();
             $table->foreign('performed_by')->references('id')->on('users')->nullOnDelete();
 
-            $table->index(['organization_id', 'patient_id', 'assessment_type']);
+            $table->index(['organization_id', 'patient_id', 'assessment_type'], 'nursing_assess_org_patient_type_idx');
         });
     }
 

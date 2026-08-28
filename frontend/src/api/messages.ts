@@ -26,23 +26,27 @@ export interface SendMessageRequest {
   content: string
 }
 
-export async function getConversations(): Promise<Conversation[]> {
-  const { data } = await apiClient.get<{ success: boolean; data: Conversation[] }>('/patient/messages/conversations')
+export async function getConversations(role: string = 'patient'): Promise<Conversation[]> {
+  const prefix = role === 'clinician' ? 'clinician' : 'patient'
+  const { data } = await apiClient.get<{ success: boolean; data: Conversation[] }>(`/${prefix}/messages/conversations`)
   return data.data
 }
 
-export async function getMessages(userId: number): Promise<Message[]> {
-  const { data } = await apiClient.get<{ success: boolean; data: Message[] }>(`/patient/messages/${userId}`)
+export async function getMessages(userId: number, role: string = 'patient'): Promise<Message[]> {
+  const prefix = role === 'clinician' ? 'clinician' : 'patient'
+  const { data } = await apiClient.get<{ success: boolean; data: Message[] }>(`/${prefix}/messages/${userId}`)
   return data.data
 }
 
-export async function sendMessage(request: SendMessageRequest): Promise<Message> {
-  const { data } = await apiClient.post<{ success: boolean; data: Message }>('/patient/messages', request)
+export async function sendMessage(request: SendMessageRequest, role: string = 'patient'): Promise<Message> {
+  const prefix = role === 'clinician' ? 'clinician' : 'patient'
+  const { data } = await apiClient.post<{ success: boolean; data: Message }>(`/${prefix}/messages`, request)
   return data.data
 }
 
-export async function markAsRead(messageId: number): Promise<Message> {
-  const { data } = await apiClient.post<{ success: boolean; data: Message }>(`/patient/messages/${messageId}/read`)
+export async function markAsRead(messageId: number, role: string = 'patient'): Promise<Message> {
+  const prefix = role === 'clinician' ? 'clinician' : 'patient'
+  const { data } = await apiClient.post<{ success: boolean; data: Message }>(`/${prefix}/messages/${messageId}/read`)
   return data.data
 }
 

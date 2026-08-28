@@ -42,20 +42,20 @@ export interface CreateVitalSignRequest {
 }
 
 export async function getPatientVitalSigns(patientId: number): Promise<VitalSign[]> {
-  const { data } = await apiClient.get<{ success: boolean; data: VitalSign[] }>(`/clinician/patients/${patientId}/vital-signs`)
+  const { data } = await apiClient.get<{ success: boolean; data: VitalSign[] }>(`/clinician/clinical/patients/${patientId}/vital-signs`)
   return data.data
 }
 
 export async function createVitalSign(request: CreateVitalSignRequest): Promise<VitalSign> {
-  const { data } = await apiClient.post<{ success: boolean; data: VitalSign }>('/clinician/vital-signs', request)
+  const { data } = await apiClient.post<{ success: boolean; data: VitalSign }>('/clinician/clinical/vital-signs', request)
   return data.data
 }
 
 export async function updateVitalSign(id: number, request: Partial<CreateVitalSignRequest>): Promise<VitalSign> {
-  const { data } = await apiClient.put<{ success: boolean; data: VitalSign }>(`/clinician/vital-signs/${id}`, request)
+  const { data } = await apiClient.put<{ success: boolean; data: VitalSign }>(`/clinician/clinical/vital-signs/${id}`, request)
   return data.data
 }
 
 export async function deleteVitalSign(id: number): Promise<void> {
-  await apiClient.delete(`/clinician/vital-signs/${id}`)
+  await apiClient.delete(`/clinician/clinical/vital-signs/${id}`)
 }

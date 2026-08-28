@@ -33,8 +33,8 @@ return new class extends Migration
             $table->foreign('prescription_id')->references('id')->on('prescriptions')->nullOnDelete();
             $table->foreign('administered_by')->references('id')->on('users')->nullOnDelete();
 
-            $table->index(['organization_id', 'patient_id', 'scheduled_time']);
-            $table->index(['organization_id', 'status']);
+            $table->index(['organization_id', 'patient_id', 'scheduled_time'], 'med_admin_org_patient_time_idx');
+            $table->index(['organization_id', 'status'], 'med_admin_org_status_idx');
         });
     }
 

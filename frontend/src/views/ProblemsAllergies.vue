@@ -302,7 +302,7 @@ loadData()
       </div>
 
       <div v-if="loading" class="text-sm text-slate-500">Loading…</div>
-      <div v-else-if="problems.length === 0" class="text-sm text-slate-500">No problems recorded</div>
+      <div v-else-if="!problems || problems.length === 0" class="text-sm text-slate-500">No problems recorded</div>
       <div v-else class="space-y-3">
         <div v-for="problem in problems" :key="problem.id" class="rounded-lg border border-slate-200 p-4">
           <div class="flex items-start justify-between gap-4">
@@ -332,7 +332,7 @@ loadData()
       </div>
 
       <div v-if="loading" class="text-sm text-slate-500">Loading…</div>
-      <div v-else-if="allergies.length === 0" class="text-sm text-slate-500">No allergies recorded</div>
+      <div v-else-if="!allergies || allergies.length === 0" class="text-sm text-slate-500">No allergies recorded</div>
       <div v-else class="space-y-3">
         <div v-for="allergy in allergies" :key="allergy.id" class="rounded-lg border border-slate-200 p-4">
           <div class="flex items-start justify-between gap-4">

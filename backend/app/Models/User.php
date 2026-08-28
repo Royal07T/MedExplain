@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\Plan;
 use App\Enums\UserRole;
+use App\Models\Message;
 use Database\Factories\UserFactory;
 use Illuminate\Auth\MustVerifyEmail as MustVerifyEmailTrait;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -125,6 +126,22 @@ class User extends Authenticatable implements MustVerifyEmail
     public function consents(): HasMany
     {
         return $this->hasMany(PatientConsent::class, 'patient_user_id');
+    }
+
+    /**
+     * Messages sent by this user.
+     */
+    public function sentMessages(): HasMany
+    {
+        return $this->hasMany(Message::class, 'sender_id');
+    }
+
+    /**
+     * Messages received by this user.
+     */
+    public function receivedMessages(): HasMany
+    {
+        return $this->hasMany(Message::class, 'receiver_id');
     }
 
     /**
