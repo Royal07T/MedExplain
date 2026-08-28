@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\ImagingOrder;
 use App\Services\FastApiClient;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -135,6 +136,67 @@ final class ClinicalAIController extends Controller
                 'vitals' => $request->input('vitals'),
             ])
         );
+    }
+
+    /**
+     * Ask FastAPI for a deterministic reading-priority analysis of an
+     * imaging order (Phase 5.3 Medical Imaging AI).
+     *
+     * The order is loaded server-side (org-scoped, with clinician patient
+     * access verified) so only real, in-scope orders can be analyzed.
+     */
+    public function analyzeImagingOrder(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'imaging_order_id' => ['required', 'integer', 'exists:imaging_orders,id'],
+        ]);
+        if ($validator->fails()) {
+            return $this->invalid($validator);
+        }
+
+        $organizationId = $request->user()?->organization_id;
+
+        if (!$organizationId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No organization context',
+            ], 403);
+        }
+
+        $order = ImagingOrder::where('id', $request->input('imaging_order_id'))
+            ->where('organization_id', $organizationId)
+            ->with('report')
+            ->first();
+
+        if (!$order) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Imaging order not found in this organization',
+            ], 404);
+        }
+
+        if ($request->user()->isClinician() &&
+            !$request->user()->clinicianPatients()->where('patient_user_id', $order->user_id)->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No access to this patient',
+            ], 403);
+        }
+
+        $payload = [
+            'imaging_order_id' => $order->id,
+                'modality' => (string) $order->modality,
+                'body_region' => $order->body_region,
+                'clinical_indication' => $order->clinical_indication,
+                'priority' => $order->priority?->value ?? (string) $order->priority,
+                'status' => $order->status?->value ?? (string) $order->status,
+            'icd_code' => $order->icd_code,
+            'radiation_dose_mgy' => $order->radiation_dose_mgy !== null ? (float) $order->radiation_dose_mgy : null,
+            'image_count' => $order->image_count !== null ? (int) $order->image_count : null,
+            'scheduled_at' => $order->scheduled_at?->toIso8601String(),
+        ];
+
+        return $this->ok($this->client->imagingAnalyze($payload));
     }
 
     /**

@@ -128,3 +128,30 @@ export async function predictDeterioration(vitals: PredictionVitals): Promise<De
   )
   return data.data
 }
+
+// ---------------------------------------------------------------------------
+// 5.3 Medical Imaging AI
+// ---------------------------------------------------------------------------
+
+export interface ImagingRecommendation {
+  title: string
+  detail: string
+  priority_impact: string
+}
+
+export interface ImagingAnalysis {
+  priority_level: 'routine' | 'urgent' | 'stat'
+  rationale: string
+  recommendations: ImagingRecommendation[]
+  quality_hints: string[]
+  disclaimer: string
+  analyzed_modality: string
+}
+
+export async function analyzeImagingOrder(imagingOrderId: number): Promise<ImagingAnalysis> {
+  const { data } = await apiClient.post<{ success: boolean; data: ImagingAnalysis }>(
+    '/clinician/ai/imaging/analyze',
+    { imaging_order_id: imagingOrderId }
+  )
+  return data.data
+}

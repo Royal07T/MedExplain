@@ -6,6 +6,7 @@ from app.api.v1 import (
     documents,
     health,
     health_query,
+    imaging,
     medications,
     nlp,
     predictive,
@@ -20,3 +21,4 @@ api_router.include_router(health_query.router, tags=["health-query"])
 api_router.include_router(nlp.router, tags=["nlp"])
 api_router.include_router(predictive.router, tags=["predictive"])
 api_router.include_router(assistant.router, tags=["assistant"])
+api_router.include_router(imaging.router, tags=["imaging"])

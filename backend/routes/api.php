@@ -287,6 +287,9 @@ Route::prefix('v1')->group(function (): void {
                 Route::post('predictive/readmission', [ClinicalAIController::class, 'predictReadmission'])->middleware('throttle:api');
                 Route::post('predictive/length-of-stay', [ClinicalAIController::class, 'predictLengthOfStay'])->middleware('throttle:api');
                 Route::post('predictive/deterioration', [ClinicalAIController::class, 'predictDeterioration'])->middleware('throttle:api');
+
+                // 5.3 Medical Imaging AI
+                Route::post('imaging/analyze', [ClinicalAIController::class, 'analyzeImagingOrder'])->middleware('throttle:api');
             });
         });
 

@@ -239,6 +239,17 @@ final class FastApiClient
     }
 
     /**
+     * Ask FastAPI for a deterministic imaging-order reading analysis.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    public function imagingAnalyze(array $payload): array
+    {
+        return $this->postJson('/api/v1/imaging/analyze', $payload);
+    }
+
+    /**
      * Check the FastAPI service health.
      *
      * @return array<string, mixed>

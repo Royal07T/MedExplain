@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import {
   summarizeNote,
   extractConcepts,
@@ -7,6 +7,7 @@ import {
   predictReadmission,
   predictLengthOfStay,
   predictDeterioration,
+  analyzeImagingOrder,
   type NoteSummary,
   type Concept,
   type ConceptExtraction,
@@ -15,12 +16,16 @@ import {
   type LengthOfStayPrediction,
   type DeteriorationPrediction,
   type PredictionVitals,
+  type ImagingAnalysis,
 } from '@/api/clinicalAI'
+import { getPatientImagingOrders, type ImagingOrder } from '@/api/imaging'
+import { listPatients, type ClinicianPatient } from '@/api/clinician'
 
-type TabKey = 'nlp' | 'predictive'
+type TabKey = 'nlp' | 'predictive' | 'imaging'
 const tabs: Array<{ value: TabKey; label: string }> = [
   { value: 'nlp', label: 'NLP Tools' },
   { value: 'predictive', label: 'Predictive Analytics' },
+  { value: 'imaging', label: 'Imaging AI' },
 ]
 const activeTab = ref<TabKey>('nlp')
 
@@ -192,6 +197,48 @@ const levelBadge = (level: string): string =>
     moderate: 'bg-amber-100 text-amber-700',
     high: 'bg-orange-100 text-orange-700',
     critical: 'bg-red-100 text-red-700',
+  })[level] || 'bg-slate-100 text-slate-600'
+
+// ---------------------------------------------------------------------------
+// Imaging AI
+// ---------------------------------------------------------------------------
+const patients = ref<ClinicianPatient[]>([])
+const orders = ref<ImagingOrder[]>([])
+const selectedPatientId = ref<number | null>(null)
+const selectedOrderId = ref<number | null>(null)
+const imagingAnalysis = ref<ImagingAnalysis | null>(null)
+
+onMounted(async () => {
+  try {
+    patients.value = await listPatients()
+  } catch {
+    patients.value = []
+  }
+})
+
+async function loadOrders() {
+  orders.value = []
+  selectedOrderId.value = null
+  imagingAnalysis.value = null
+  if (selectedPatientId.value == null) return
+  try {
+    orders.value = await getPatientImagingOrders(selectedPatientId.value)
+  } catch {
+    orders.value = []
+  }
+}
+
+async function doAnalyzeImaging() {
+  if (selectedOrderId.value == null) return
+  const result = await run(() => analyzeImagingOrder(selectedOrderId.value as number))
+  if (result) imagingAnalysis.value = result
+}
+
+const priorityBadge = (level: string): string =>
+  ({
+    routine: 'bg-emerald-100 text-emerald-700',
+    urgent: 'bg-amber-100 text-amber-700',
+    stat: 'bg-red-100 text-red-700',
   })[level] || 'bg-slate-100 text-slate-600'
 </script>
 
@@ -409,6 +456,71 @@ const levelBadge = (level: string): string =>
           <ul v-if="deterioration.red_flags.length" class="mt-3 list-disc list-inside text-xs text-slate-500">
             <li v-for="(f, i) in deterioration.red_flags" :key="i">{{ f }}</li>
           </ul>
+        </div>
+      </section>
+    </div>
+
+    <!-- IMAGING AI TAB -->
+    <div v-if="activeTab === 'imaging'" class="grid grid-cols-1 gap-6">
+      <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+        <h2 class="text-lg font-semibold text-slate-800 mb-3">Reading-Priority Analysis</h2>
+        <p class="text-sm text-slate-500 mb-4">
+          Select a patient and an imaging order to get a deterministic reading
+          priority suggestion, actionable recommendations, and quality hints.
+        </p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+          <label>Patient
+            <select v-model="selectedPatientId" @change="loadOrders"
+              class="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1">
+              <option :value="null" disabled>Select a patient&hellip;</option>
+              <option v-for="p in patients" :key="p.id" :value="p.id">{{ p.name }}</option>
+            </select>
+          </label>
+          <label>Imaging order
+            <select v-model="selectedOrderId"
+              class="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1">
+              <option :value="null" disabled>Select an order&hellip;</option>
+              <option v-for="o in orders" :key="o.id" :value="o.id">
+                #{{ o.id }} — {{ o.modality }} / {{ o.body_region || 'n/a' }} ({{ o.priority }})
+              </option>
+            </select>
+          </label>
+        </div>
+        <button @click="doAnalyzeImaging" :disabled="loading || selectedOrderId == null"
+          class="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-50">
+          Analyze
+        </button>
+
+        <div v-if="imagingAnalysis" class="mt-5 grid grid-cols-1 gap-4">
+          <div class="p-4 rounded-lg bg-slate-50 border border-slate-200">
+            <div class="flex items-center gap-3">
+              <span class="text-sm font-semibold text-slate-700">Recommended priority</span>
+              <span class="rounded-full px-3 py-1 text-xs font-medium" :class="priorityBadge(imagingAnalysis.priority_level)">
+                {{ imagingAnalysis.priority_level }}
+              </span>
+            </div>
+            <p class="mt-2 text-sm text-slate-600">{{ imagingAnalysis.rationale }}</p>
+          </div>
+
+          <div v-if="imagingAnalysis.recommendations.length" class="p-4 rounded-lg bg-white border border-slate-200">
+            <h3 class="text-sm font-semibold text-slate-800 mb-2">Recommendations</h3>
+            <ul class="space-y-2">
+              <li v-for="(r, i) in imagingAnalysis.recommendations" :key="i">
+                <span class="text-sm font-medium text-slate-700">{{ r.title }}</span>
+                <span class="text-xs text-slate-400"> ({{ r.priority_impact }})</span>
+                <p class="text-xs text-slate-500">{{ r.detail }}</p>
+              </li>
+            </ul>
+          </div>
+
+          <div v-if="imagingAnalysis.quality_hints.length" class="p-4 rounded-lg bg-white border border-slate-200">
+            <h3 class="text-sm font-semibold text-slate-800 mb-2">Quality hints</h3>
+            <ul class="list-disc list-inside text-xs text-slate-500 space-y-1">
+              <li v-for="(h, i) in imagingAnalysis.quality_hints" :key="i">{{ h }}</li>
+            </ul>
+          </div>
+
+          <p class="text-xs text-slate-400">{{ imagingAnalysis.disclaimer }}</p>
         </div>
       </section>
     </div>
