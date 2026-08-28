@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\V1\LabController;
 use App\Http\Controllers\Api\V1\LabOrderController;
 use App\Http\Controllers\Api\V1\LabTestCatalogController;
 use App\Http\Controllers\Api\V1\MedicationController;
+use App\Http\Controllers\Api\V1\MedicationReminderController;
 use App\Http\Controllers\Api\V1\MessageController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\NursingDocumentationController;
@@ -44,6 +45,7 @@ use App\Http\Controllers\Api\V1\SuperAdmin\SuperAdminDashboardController;
 use App\Http\Controllers\Api\V1\SuperAdmin\SuperAdminHealthController;
 use App\Http\Controllers\Api\V1\SuperAdmin\SuperAdminOrganizationController;
 use App\Http\Controllers\Api\V1\SuperAdmin\SuperAdminUserController;
+use App\Http\Controllers\Api\V1\SymptomCheckerController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\VitalSignController;
 use Illuminate\Support\Facades\Route;
@@ -122,6 +124,13 @@ Route::prefix('v1')->group(function (): void {
             Route::get('prescription-refills', [PrescriptionRefillController::class, 'index'])->middleware('has.permission:own_medications.view');
             Route::post('prescription-refills', [PrescriptionRefillController::class, 'store'])->middleware('throttle:api', 'has.permission:prescriptions.create');
             Route::get('prescription-refills/{id}', [PrescriptionRefillController::class, 'show'])->middleware('has.permission:own_medications.view');
+
+            // Medication Adherence Reminders (Virtual Health Assistant)
+            Route::get('medication-reminders', [MedicationReminderController::class, 'index']);
+            Route::post('medication-reminders', [MedicationReminderController::class, 'store'])->middleware('throttle:api');
+            Route::post('medication-reminders/{id}/taken', [MedicationReminderController::class, 'markTaken'])->middleware('throttle:api');
+            Route::post('medication-reminders/{id}/toggle', [MedicationReminderController::class, 'toggleActive'])->middleware('throttle:api');
+            Route::delete('medication-reminders/{id}', [MedicationReminderController::class, 'destroy'])->middleware('throttle:api');
 
             // Messaging
             Route::get('messages/conversations', [MessageController::class, 'conversations']);
@@ -403,6 +412,10 @@ Route::prefix('v1')->group(function (): void {
             // AI Query
             Route::post('health/query', [HealthQueryController::class, 'store'])
                 ->middleware('throttle:health-query');
+
+            // Virtual Health Assistant
+            Route::post('assistant/symptom-check', [SymptomCheckerController::class, 'check'])
+                ->middleware('role:patient', 'throttle:api');
         });
 
         // ─── Doctor workspace (legacy — moved inside auth) ──

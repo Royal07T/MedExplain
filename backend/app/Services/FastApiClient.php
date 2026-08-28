@@ -229,6 +229,16 @@ final class FastApiClient
     }
 
     /**
+     * Ask FastAPI for a deterministic symptom-triage assessment.
+     *
+     * @return array<string, mixed>
+     */
+    public function symptomCheck(string $text): array
+    {
+        return $this->postJson('/api/v1/assistant/symptom-check', ['text' => $text]);
+    }
+
+    /**
      * Check the FastAPI service health.
      *
      * @return array<string, mixed>

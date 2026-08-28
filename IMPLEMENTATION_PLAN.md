@@ -259,15 +259,16 @@ This document outlines the strategic roadmap to transform MedExplain from a basi
 - **Current**: Basic AI assistant view exists
 - **Target**: Comprehensive virtual health assistant
 - **Tasks**:
-  - Enhance existing Assistant.vue with symptom checker
-  - Add medication adherence reminders
+  - ✅ Enhance existing Assistant.vue with symptom checker
+  - ✅ Add medication adherence reminders
   - Implement health education delivery
   - Create mental health screening chatbot
   - Add personalized health recommendations
   - Implement appointment scheduling assistance
-  - Add triage support for patients
+  - ✅ Add triage support for patients
 - **Deliverables**: Virtual health assistant, symptom checker, health education
 - **Success Metrics**: 50% reduction in unnecessary ED visits, improved patient engagement
+- **Notes (implemented 2026-08)**: Implemented symptom checker + medication adherence reminders (the deterministic/offline subset chosen by scope). `ai-service` adds `schemas/assistant.py` + `services/ai/symptom_service.py` (fully deterministic regex-based triage into `emergency`/`urgent`/`moderate`/`general` with red-flag detection) + `api/v1/assistant.py` (`POST /api/v1/assistant/symptom-check`) + tests in `tests/test_virtual_assistant.py`. Backend adds `FastApiClient::symptomCheck()` + `SymptomCheckerController` (`POST /api/v1/assistant/symptom-check`, `role:patient`) and a patient-facing medication adherence reminder feature: `MedicationReminder` model + migration + `MedicationReminderController` (CRUD, mark-taken, pause/resume) under `patient/medication-reminders`. Frontend adds `api/virtualAssistant.ts` + `VirtualAssistant.vue` (tabbed Symptom Checker / Medication Reminders) wired into the patient router/nav as `patient.virtualAssistant`. Smoke tests in `Phase54VirtualHealthAssistantSmokeTest` (4 tests). Health education delivery, mental-health screening chatbot, personalized recommendations, and appointment-scheduling assistance remain future work (would build on the existing `HealthQueryService` intent stack).
 
 ### Phase 6: Advanced Features (Months 12-18)
 

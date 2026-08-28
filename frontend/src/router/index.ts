@@ -43,6 +43,7 @@ const router = createRouter({
         { path: 'timeline', name: 'patient.timeline', component: () => import('@/views/Timeline.vue'), meta: { title: 'Timeline' } },
         { path: 'medications', name: 'patient.medications', component: () => import('@/views/Medications.vue'), meta: { title: 'Medications' } },
         { path: 'assistant', name: 'patient.assistant', component: () => import('@/views/Assistant.vue'), meta: { title: 'AI Assistant' } },
+        { path: 'virtual-assistant', name: 'patient.virtualAssistant', component: () => import('@/views/VirtualAssistant.vue'), meta: { title: 'Virtual Health Assistant' } },
         { path: 'connections', name: 'patient.connections', component: () => import('@/views/Connections.vue'), meta: { title: 'Connected Apps' } },
         { path: 'profile', name: 'patient.profile', component: () => import('@/views/Profile.vue'), meta: { title: 'Profile' } },
         { path: 'settings', name: 'patient.settings', component: () => import('@/views/Settings.vue'), meta: { title: 'Settings' } },
