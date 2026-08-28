@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\CarePlan;
 use App\Models\LabResult;
 use App\Models\DocumentExtraction;
 use App\Models\MedicalDocument;
@@ -207,5 +208,104 @@ class Phase62PopulationHealthSmokeTest extends TestCase
         $this->actingAs($this->patient(), 'sanctum')
             ->getJson('/api/v1/population-health/dashboard')
             ->assertForbidden();
+    }
+
+    // ─── Care gap identification ─────────────────────────
+
+    public function test_care_gaps_detect_monitoring_gaps(): void
+    {
+        // Diabetic patient with only a glucose lab (no HbA1c) + no BP vital.
+        $diabetic = $this->patient();
+        $this->issueProblem($diabetic, 'E11.9', 'Type 2 diabetes', 'chronic');
+        $this->addLab($diabetic, 'above_range');
+
+        // Hypertensive patient with a BP vital -> no hypertension gap.
+        $hypertensive = $this->patient();
+        $this->issueProblem($hypertensive, 'I10', 'Hypertension', 'active');
+        $this->addVitals($hypertensive);
+
+        $data = $this->actingAs($this->admin(), 'sanctum')
+            ->getJson('/api/v1/population-health/care-gaps')
+            ->assertOk()
+            ->json('data');
+
+        $diabeticRow = collect($data['patients'])->firstWhere('user_id', $diabetic->id);
+        $this->assertNotNull($diabeticRow);
+        $types = collect($diabeticRow['gaps'])->pluck('type')->all();
+        $this->assertContains('diabetic_monitoring', $types);
+        $this->assertNotContains('hypertension_monitoring', $types);
+
+        $hypertensiveRow = collect($data['patients'])->firstWhere('user_id', $hypertensive->id);
+        $this->assertNotNull($hypertensiveRow);
+        $this->assertNotContains(
+            'hypertension_monitoring',
+            collect($hypertensiveRow['gaps'])->pluck('type')->all()
+        );
+    }
+
+    public function test_care_gaps_detect_unrecorded_blood_pressure(): void
+    {
+        $hypertensive = $this->patient();
+        $this->issueProblem($hypertensive, 'I10', 'Hypertension', 'active');
+
+        $data = $this->actingAs($this->admin(), 'sanctum')
+            ->getJson('/api/v1/population-health/care-gaps')
+            ->assertOk()
+            ->json('data');
+
+        $row = collect($data['patients'])->firstWhere('user_id', $hypertensive->id);
+        $this->assertContains(
+            'hypertension_monitoring',
+            collect($row['gaps'])->pluck('type')->all()
+        );
+    }
+
+    public function test_care_gaps_care_coordination_only_fires_without_active_plan(): void
+    {
+        $noPlan = $this->patient();
+        $this->issueProblem($noPlan, 'I10', 'Hypertension', 'active');
+
+        $withPlan = $this->patient();
+        $this->issueProblem($withPlan, 'E11.9', 'Diabetes', 'chronic');
+        CarePlan::create([
+            'organization_id' => $this->organization->id,
+            'patient_id' => $withPlan->id,
+            'title' => 'Diabetes management plan',
+            'status' => 'active',
+        ]);
+
+        $data = $this->actingAs($this->admin(), 'sanctum')
+            ->getJson('/api/v1/population-health/care-gaps')
+            ->assertOk()
+            ->json('data');
+
+        $types = collect(collect($data['patients'])->firstWhere('user_id', $noPlan->id)['gaps'])
+            ->pluck('type')->all();
+        $this->assertContains('care_coordination', $types);
+
+        $withPlanRow = collect($data['patients'])->firstWhere('user_id', $withPlan->id);
+        $this->assertNotNull($withPlanRow);
+        $this->assertNotContains(
+            'care_coordination',
+            collect($withPlanRow['gaps'])->pluck('type')->all()
+        );
+    }
+
+    public function test_care_gaps_summary_counts(): void
+    {
+        $a = $this->patient();
+        $this->issueProblem($a, 'E11.9', 'Diabetes', 'chronic');
+        $this->addVitals($a);
+
+        $b = $this->patient();
+        $this->issueProblem($b, 'I10', 'Hypertension', 'active');
+
+        $this->actingAs($this->admin(), 'sanctum')
+            ->getJson('/api/v1/population-health/care-gaps')
+            ->assertOk()
+            ->assertJsonPath('data.summary.total_patients', 2)
+            ->assertJsonPath('data.summary.with_gaps', 2)
+            ->assertJsonPath('data.summary.gaps_by_type.diabetic_monitoring', 1)
+            ->assertJsonPath('data.summary.gaps_by_type.hypertension_monitoring', 1);
     }
 }

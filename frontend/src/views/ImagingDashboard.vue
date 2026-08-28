@@ -11,16 +11,18 @@ import {
   type CreateImagingOrderRequest,
   type ImagingModality,
 } from '@/api/imaging'
+import { listPatients, type ClinicianPatient } from '@/api/clinician'
 
 const orders = ref<ImagingOrder[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
-const patientId = ref<number>(1)
+const patientId = ref<number | null>(null)
+const patients = ref<ClinicianPatient[]>([])
 
 // Form state
 const showForm = ref(false)
 const form = ref<CreateImagingOrderRequest>({
-  patient_id: patientId.value,
+  patient_id: patientId.value!,
   modality: 'xray',
   priority: 'routine',
 })
@@ -60,6 +62,7 @@ const statusStyles: Record<string, string> = {
 
 // Load data
 async function loadOrders() {
+  if (patientId.value == null) return
   loading.value = true
   error.value = null
   try {
@@ -71,7 +74,22 @@ async function loadOrders() {
   }
 }
 
+async function loadPatients() {
+  try {
+    patients.value = await listPatients()
+    if (patients.value.length && patientId.value == null) {
+      patientId.value = patients.value[0].id
+      await loadOrders()
+    }
+  } catch {
+    patients.value = []
+  }
+}
+
+onMounted(loadPatients)
+
 function openForm() {
+  if (patientId.value == null) return
   form.value = {
     patient_id: patientId.value,
     modality: 'xray',
@@ -209,9 +227,7 @@ onMounted(loadOrders)
           @change="loadOrders"
           class="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 focus:border-teal-500 focus:outline-none"
         >
-          <option :value="1">Patient 1</option>
-          <option :value="2">Patient 2</option>
-          <option :value="3">Patient 3</option>
+          <option v-for="p in patients" :key="p.id" :value="p.id">{{ p.name }}</option>
         </select>
       </div>
       <button @click="openForm" class="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">Place Imaging Order</button>

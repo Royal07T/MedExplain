@@ -48,6 +48,16 @@ final class PopulationHealthController extends Controller
         ]);
     }
 
+    public function careGaps(Request $request): JsonResponse
+    {
+        $patientIds = $this->resolvePatientIds($request);
+
+        return response()->json([
+            'success' => true,
+            'data' => $this->health->careGaps($patientIds),
+        ]);
+    }
+
     /**
      * Determine the population scope for the authenticated user.
      *

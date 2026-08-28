@@ -145,13 +145,6 @@ Route::prefix('v1')->group(function (): void {
             Route::get('billing', [BillingController::class, 'patientInvoices'])->middleware('has.permission:billing.view');
             Route::post('billing/{id}/pay', [BillingController::class, 'patientPay'])->middleware('throttle:api', 'has.permission:billing.manage');
 
-            // Clinical Note Templates
-            Route::get('clinical-note-templates', [ClinicalNoteTemplateController::class, 'index'])->middleware('has.permission:clinical_notes.view');
-            Route::post('clinical-note-templates', [ClinicalNoteTemplateController::class, 'store'])->middleware('throttle:api', 'has.permission:clinical_notes.create');
-            Route::get('clinical-note-templates/{id}', [ClinicalNoteTemplateController::class, 'show'])->middleware('has.permission:clinical_notes.view');
-            Route::put('clinical-note-templates/{id}', [ClinicalNoteTemplateController::class, 'update'])->middleware('throttle:api', 'has.permission:clinical_notes.update');
-            Route::delete('clinical-note-templates/{id}', [ClinicalNoteTemplateController::class, 'destroy'])->middleware('has.permission:clinical_notes.delete');
-
             // Problem Lists
             Route::get('patients/{patientId}/problems', [ProblemListController::class, 'index'])->middleware('has.permission:patients.view');
             Route::post('problems', [ProblemListController::class, 'store'])->middleware('throttle:api', 'has.permission:patients.update');
@@ -214,6 +207,13 @@ Route::prefix('v1')->group(function (): void {
             Route::post('imaging/orders/{id}/result', [ImagingOrderController::class, 'recordResult']);
             Route::post('imaging/orders/{id}/cancel', [ImagingOrderController::class, 'cancel']);
             Route::post('imaging/orders/{id}/report', [ImagingOrderController::class, 'report']);
+
+            // Clinical Note Templates
+            Route::get('clinical-note-templates', [ClinicalNoteTemplateController::class, 'index'])->middleware('has.permission:clinical_notes.view');
+            Route::post('clinical-note-templates', [ClinicalNoteTemplateController::class, 'store'])->middleware('throttle:api', 'has.permission:clinical_notes.create');
+            Route::get('clinical-note-templates/{id}', [ClinicalNoteTemplateController::class, 'show'])->middleware('has.permission:clinical_notes.view');
+            Route::put('clinical-note-templates/{id}', [ClinicalNoteTemplateController::class, 'update'])->middleware('throttle:api', 'has.permission:clinical_notes.update');
+            Route::delete('clinical-note-templates/{id}', [ClinicalNoteTemplateController::class, 'destroy'])->middleware('has.permission:clinical_notes.delete');
 
             // Appointments
             Route::get('patients/{patientId}/appointments', [AppointmentController::class, 'index'])->middleware('has.permission:appointments.view');
@@ -402,6 +402,7 @@ Route::prefix('v1')->group(function (): void {
                 Route::get('dashboard', [PopulationHealthController::class, 'dashboard']);
                 Route::get('registry', [PopulationHealthController::class, 'registry']);
                 Route::get('risk', [PopulationHealthController::class, 'risk']);
+                Route::get('care-gaps', [PopulationHealthController::class, 'careGaps']);
             });
 
         // ─── Shared authenticated routes (role-scoped) ─────

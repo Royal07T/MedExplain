@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Enums\CarePlanStatus;
 use App\Enums\LabResultStatus;
+use App\Models\CarePlan;
 use App\Models\LabResult;
 use App\Models\Patient;
 use App\Models\ProblemList;
@@ -195,6 +197,107 @@ final class PopulationHealthService
     }
 
     /**
+     * Identify deterministic care gaps for a set of patients.
+     *
+     * Gaps are derived from data already in the database, matched against
+     * curated ICD-10 condition families. Only active/chronic diagnoses are
+     * considered. Each gap is returned with a human-readable description.
+     *
+     * @param  int[]  $patientIds
+     * @return array{patients: array<int, array{user_id: int, gaps: array<int, array{type: string, description: string}>}>, summary: array{total_patients: int, with_gaps: int, gaps_by_type: array<string, int>}}
+     */
+    public function careGaps(array $patientIds): array
+    {
+        if ($patientIds === []) {
+            return ['patients' => [], 'summary' => ['total_patients' => 0, 'with_gaps' => 0, 'gaps_by_type' => []]];
+        }
+
+        $problems = ProblemList::whereIn('patient_id', $patientIds)
+            ->whereIn('status', ['active', 'chronic'])
+            ->get(['patient_id', 'icd10_code'])
+            ->groupBy('patient_id');
+
+        // Per-patient monitoring evidence.
+        $a1cLabs = LabResult::whereIn('user_id', $patientIds)
+            ->get(['user_id', 'normalized_name'])
+            ->filter(fn ($r) => !$r->normalized_name
+                || str_contains(strtolower($r->normalized_name), 'a1c')
+                || str_contains(strtolower($r->normalized_name), 'hba1c')
+                || str_contains(strtolower($r->normalized_name), 'glycated'))
+            ->pluck('user_id')
+            ->unique();
+
+        $bpPatients = VitalSign::whereIn('patient_id', $patientIds)
+            ->whereNotNull('blood_pressure_systolic')
+            ->pluck('patient_id')
+            ->unique();
+
+        $spo2Patients = VitalSign::whereIn('patient_id', $patientIds)
+            ->whereNotNull('oxygen_saturation')
+            ->pluck('patient_id')
+            ->unique();
+
+        $withActiveCarePlan = CarePlan::whereIn('patient_id', $patientIds)
+            ->where('status', CarePlanStatus::Active->value)
+            ->pluck('patient_id')
+            ->unique();
+
+        $patients = collect($patientIds)->map(function (int $userId) use (
+            $problems, $a1cLabs, $bpPatients, $spo2Patients, $withActiveCarePlan
+        ): array {
+            $gaps = [];
+
+            $codes = $problems->get($userId, collect())
+                ->pluck('icd10_code')
+                ->map(fn ($c) => strtoupper((string) $c));
+
+            $hasDiabetic = $codes->contains(fn ($c) => $this->icdInRange($c, 'E08', 'E14'));
+            if ($hasDiabetic && !$a1cLabs->contains($userId)) {
+                $gaps[] = [
+                    'type' => 'diabetic_monitoring',
+                    'description' => 'Patient has a diabetes diagnosis but no recorded HbA1c result.',
+                ];
+            }
+
+            $hasHypertensive = $codes->contains(fn ($c) => $this->icdInRange($c, 'I10', 'I15'));
+            if ($hasHypertensive && !$bpPatients->contains($userId)) {
+                $gaps[] = [
+                    'type' => 'hypertension_monitoring',
+                    'description' => 'Patient has a hypertension diagnosis but no recorded blood pressure vital.',
+                ];
+            }
+
+            $hasRespiratory = $codes->contains(fn ($c) => $this->icdInRange($c, 'J44', 'J45'));
+            if ($hasRespiratory && !$spo2Patients->contains($userId)) {
+                $gaps[] = [
+                    'type' => 'respiratory_monitoring',
+                    'description' => 'Patient has asthma/COPD but no recorded oxygen-saturation vital.',
+                ];
+            }
+
+            if ($codes->isNotEmpty() && !$withActiveCarePlan->contains($userId)) {
+                $gaps[] = [
+                    'type' => 'care_coordination',
+                    'description' => 'Patient has an active/chronic condition but no active care plan.',
+                ];
+            }
+
+            return ['user_id' => $userId, 'gaps' => $gaps];
+        })->filter(fn ($p) => $p['gaps'] !== []);
+
+        $byType = $patients->flatMap(fn ($p) => collect($p['gaps'])->pluck('type'))->countBy()->all();
+
+        return [
+            'patients' => $patients->values()->all(),
+            'summary' => [
+                'total_patients' => count($patientIds),
+                'with_gaps' => $patients->count(),
+                'gaps_by_type' => $byType,
+            ],
+        ];
+    }
+
+    /**
      * Resolve the org's patient User ids (canonical population scope).
      *
      * @return int[]
@@ -243,5 +346,22 @@ final class PopulationHealthService
             'female', 'f' => 'female',
             default => 'other',
         };
+    }
+
+    /**
+     * Whether an ICD-10 code falls within a start/end alphabetic prefix range.
+     *
+     * The 3-char alphabetic chapter letters are compared with the code's
+     * leading letters so e.g. 'E10' is in ['E08', 'E14'].
+     */
+    private function icdInRange(string $code, string $start, string $end): bool
+    {
+        $letter = substr($code, 0, 1);
+        if (!ctype_alpha($letter) || strtoupper(substr($start, 0, 1)) !== $letter) {
+            return false;
+        }
+
+        $num = (int) substr($code, 1, 2);
+        return $num >= (int) substr($start, 1, 2) && $num <= (int) substr($end, 1, 2);
     }
 }
