@@ -34,6 +34,7 @@ use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\NursingDocumentationController;
 use App\Http\Controllers\Api\V1\Patient\PatientDashboardController;
 use App\Http\Controllers\Api\V1\PatientContextController;
+use App\Http\Controllers\Api\V1\PopulationHealthController;
 use App\Http\Controllers\Api\V1\PartnerConsentController;
 use App\Http\Controllers\Api\V1\PartnerDataController;
 use App\Http\Controllers\Api\V1\PartnerOAuthController;
@@ -390,6 +391,15 @@ Route::prefix('v1')->group(function (): void {
 
             Route::get('system/health', [SuperAdminHealthController::class, 'index']);
         });
+
+        // ─── Population health (org / clinician-grant scoped) ──
+        Route::prefix('population-health')
+            ->middleware('role:admin,super_admin,nursing_staff,clinician')
+            ->group(function (): void {
+                Route::get('dashboard', [PopulationHealthController::class, 'dashboard']);
+                Route::get('registry', [PopulationHealthController::class, 'registry']);
+                Route::get('risk', [PopulationHealthController::class, 'risk']);
+            });
 
         // ─── Shared authenticated routes (role-scoped) ─────
         Route::middleware('throttle:api')->group(function (): void {

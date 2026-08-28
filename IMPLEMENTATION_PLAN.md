@@ -208,7 +208,7 @@ This document outlines the strategic roadmap to transform MedExplain from a basi
 - **Success Metrics**: 50% reduction in documentation time, improved care coordination
 - **Notes (implemented 2026-08)**: `CarePlan`/`MedicationAdministration`/`NursingAssessment`/`ShiftHandoff` models + migrations (User-id `patient_id` convention, org-scoped), `CarePlanStatus`/`MedicationAdminStatus`/`FallRiskLevel`/`AssessmentType` enums, `NursingDocumentationController` (care plans CRUD+status, MAR record/administer, assessment templates, assessments incl. fall risk + pressure ulcer, fall-risk board, shift handoffs), routes under nursing workspace, frontend `api/nursingDocumentation.ts` + `NursingDocumentation.vue` (tabbed: Care Plans, MAR, Assessments, Shift Handoffs) wired into nursing nav/router, and `Phase43NursingDocumentationSmokeTest` coverage. Vital signs documentation already existed via `nursing/clinical/vital-signs`.
 
-### Phase 5: AI Integration (Months 6-12)
+### Phase 5: AI Integration 
 
 **Objective**: Implement AI-powered features for enhanced clinical decision support
 
@@ -216,30 +216,28 @@ This document outlines the strategic roadmap to transform MedExplain from a basi
 - **Current**: None
 - **Target**: AI-powered clinical documentation assistance
 - **Tasks**:
-  - [x] Integrate OpenAI/Claude API for clinical note summarization
-  - [x] Add information extraction from medical documents
-  - [ ] Implement voice-to-text for clinical documentation
-  - [ ] Create translation service for multi-language support
-  - [x] Add clinical concept extraction (diagnoses, medications)
-  - [x] Implement sentiment analysis for patient feedback
+  - Integrate OpenAI/Claude API for clinical note summarization
+  - Add information extraction from medical documents
+  - Implement voice-to-text for clinical documentation
+  - Create translation service for multi-language support
+  - Add clinical concept extraction (diagnoses, medications)
+  - Implement sentiment analysis for patient feedback
 - **Deliverables**: NLP integration, documentation assistance, translation
 - **Success Metrics**: 60% reduction in documentation time, improved documentation quality
-- **Notes (implemented 2026-08)**: 5.1 and 5.2 were implemented together, plus a new frontend AI tools workspace. `ai-service` additions: `schemas/nlp.py` + `schemas/predictive.py`, `services/ai/nlp_service.py` + `services/ai/predictive_service.py` (both fully deterministic/offline — no live model required), and `api/v1/nlp.py` + `api/v1/predictive.py` wired into the router. NLP covers extractive note summarization, lexicon-based sentiment, and dictionary/regex concept extraction (medications + diagnoses). Predictive covers transparent heuristic scoring for readmission risk, length-of-stay, and NEWS2-style deterioration early-warning (all return contributing factors). Backend adds `ClinicalAIController` + `FastApiClient` proxy methods + routes under the clinician workspace (`clinician/ai/nlp/*` and `clinician/ai/predictive/*`, `role:clinician`). Frontend adds `api/clinicalAI.ts` + `ClinicalAITools.vue` (tabbed NLP/Predictive) wired into clinician nav/router. Voice-to-text, translation, patient-flow/resource-optimization, and real ML model training remain future work.
 
 #### 5.2 Predictive Analytics
 - **Current**: None
 - **Target**: ML-powered predictive analytics for patient outcomes
 - **Tasks**:
-  - [x] Build ML models for readmission risk prediction
-  - [x] Implement sepsis early warning system
-  - [ ] Add patient flow prediction for ED
-  - [ ] Create resource optimization algorithms
-  - [ ] Add quality metrics analysis
-  - [x] Implement length of stay prediction
-  - [x] Add deterioration risk scoring
+  - Build ML models for readmission risk prediction
+  - Implement sepsis early warning system
+  - Add patient flow prediction for ED
+  - Create resource optimization algorithms
+  - Add quality metrics analysis
+  - Implement length of stay prediction
+  - Add deterioration risk scoring
 - **Deliverables**: Predictive models, early warning systems, analytics dashboard
 - **Success Metrics**: 30% reduction in readmissions, earlier intervention for deteriorating patients
-- **Notes (implemented 2026-08)**: Readmission, length-of-stay, and deterioration early-warning are implemented as transparent deterministic heuristics in the ai-service with contributing-factor transparency. Sepsis early warning is approximated by the NEWS2-style deterioration scoring. Patient flow prediction, resource optimization, and quality metrics analysis remain future work; genuine ML model training would require labeled outcome data and is deferred.
 
 #### 5.3 Medical Imaging AI
 - **Current**: None
@@ -259,18 +257,17 @@ This document outlines the strategic roadmap to transform MedExplain from a basi
 - **Current**: Basic AI assistant view exists
 - **Target**: Comprehensive virtual health assistant
 - **Tasks**:
-  - ✅ Enhance existing Assistant.vue with symptom checker
-  - ✅ Add medication adherence reminders
+  - Enhance existing Assistant.vue with symptom checker
+  - Add medication adherence reminders
   - Implement health education delivery
   - Create mental health screening chatbot
   - Add personalized health recommendations
   - Implement appointment scheduling assistance
-  - ✅ Add triage support for patients
+  - Add triage support for patients
 - **Deliverables**: Virtual health assistant, symptom checker, health education
 - **Success Metrics**: 50% reduction in unnecessary ED visits, improved patient engagement
-- **Notes (implemented 2026-08)**: Implemented symptom checker + medication adherence reminders (the deterministic/offline subset chosen by scope). `ai-service` adds `schemas/assistant.py` + `services/ai/symptom_service.py` (fully deterministic regex-based triage into `emergency`/`urgent`/`moderate`/`general` with red-flag detection) + `api/v1/assistant.py` (`POST /api/v1/assistant/symptom-check`) + tests in `tests/test_virtual_assistant.py`. Backend adds `FastApiClient::symptomCheck()` + `SymptomCheckerController` (`POST /api/v1/assistant/symptom-check`, `role:patient`) and a patient-facing medication adherence reminder feature: `MedicationReminder` model + migration + `MedicationReminderController` (CRUD, mark-taken, pause/resume) under `patient/medication-reminders`. Frontend adds `api/virtualAssistant.ts` + `VirtualAssistant.vue` (tabbed Symptom Checker / Medication Reminders) wired into the patient router/nav as `patient.virtualAssistant`. Smoke tests in `Phase54VirtualHealthAssistantSmokeTest` (4 tests). Health education delivery, mental-health screening chatbot, personalized recommendations, and appointment-scheduling assistance remain future work (would build on the existing `HealthQueryService` intent stack).
 
-### Phase 6: Advanced Features (Months 12-18)
+### Phase 6: Advanced Features 
 
 **Objective**: Implement enterprise-grade features for scalability and interoperability
 
@@ -278,44 +275,32 @@ This document outlines the strategic roadmap to transform MedExplain from a basi
 - **Current**: Basic API structure
 - **Target**: Full healthcare interoperability
 - **Tasks**:
-  - ✅ (partial) Implement FHIR R4 read endpoints (Patient / Organization / metadata)
+  - Implement FHIR R4 endpoints
   - Add HL7 message processing
   - Create NHS Spine integration
-  - ✅ Implement ICD-10/11 coding system (lookup + validation)
-  - ✅ Add SNOMED CT terminology (lookup + validation)
+  - Implement ICD-10/11 coding system
+  - Add SNOMED CT terminology
   - Create API developer portal
   - Implement webhook system for integrations
 - **Deliverables**: FHIR implementation, HL7 integration, developer portal
 - **Success Metrics**: Successful integration with external systems, improved data exchange
-- **Notes (implemented 2026-08, chosen scope: terminology + FHIR read)**: Backend-only additions under the shared authenticated `api/v1` group. **Terminology**: `App\Services\Terminology\TerminologyService` + `TerminologyCodes` (deterministic offline ICD-10-CM + SNOMED CT reference vocabulary, expandable arrays) with `TerminologyController` — `GET /api/v1/terminology/systems`, `GET /api/v1/terminology/search?system=&q=`, `POST /api/v1/terminology/validate` (code + optional display consistency check). Useful for improving the quality of free-form `ProblemList.icd10_code` / `ImagingOrder.icd_code` fields. **FHIR R4 read**: `App\Services\Fhir\FhirResourceService` (spec-shaped Patient / Organization / CapabilityStatement mappers) + `FhirController` — `GET /api/v1/fhir/metadata`, `GET /api/v1/fhir/Patient/{id}`, `GET /api/v1/fhir/Organization/{id}`, returning raw `application/fhir+json` resources (not the app `success`/`data` envelope), organization-scoped with `OperationOutcome` 404s. Also fixed a latent `Patient` model cast bug (`organization_id => Organization::class` was being treated as a custom cast class, blocking all writes to `patients`; corrected to `integer`). Tests in `Phase61InteroperabilitySmokeTest` (10). HL7 v2 ingest, NHS Spine, full FHIR CRUD/Search, API developer portal, and webhook delivery remain future work.
 
 #### 6.2 Population Health
 - **Current**: None
 - **Target**: Population health management platform
 - **Tasks**:
-  - Create disease registry system
+  - ✅ Create disease registry system
   - Implement public health reporting
-  - Add population health dashboards
+  - ✅ Add population health dashboards
   - Create epidemiological surveillance
-  - Build health analytics platform
-  - Implement risk stratification
+  - ✅ Build health analytics platform
+  - ✅ Implement risk stratification
   - Add care gap identification
 - **Deliverables**: Population health platform, disease registries, analytics
 - **Success Metrics**: Improved population health outcomes, better care coordination
+- **Notes (implemented 2026-08, deterministic/offline subset)**: Backend-only, organization-scoped population analytics. `App\Services\PopulationHealthService` computes three views in PHP over scoped collections (SQLite-safe, no MySQL-only SQL): **disease registry** (patients grouped by `ProblemList.icd10_code`, active/chronic only, distinct-patient counts), **risk stratification** (deterministic low/moderate/high tiers from active/chronic conditions, abnormal lab results, critical vitals, and age 65+ with contributing factors + summary), and **population dashboard** (total patients, gender + age-band breakdowns, patients-with-abnormal-labs + rate, top conditions, risk summary). `PopulationHealthController` exposes `GET /api/v1/population-health/dashboard`, `/registry`, `/risk` under `role:admin,super_admin,nursing_staff,clinician`. Admin/super_admin/nursing see the whole org; clinicians are scoped to their granted patients (`clinician_patient_access`). Tests in `Phase62PopulationHealthSmokeTest` (5). Public-health reporting, epidemiological surveillance, and care-gap identification remain future work.
 
-#### 6.3 Mobile Applications
-- **Current**: Web-based only
-- **Target**: Native mobile applications
-- **Tasks**:
-  - Create React Native mobile apps (iOS/Android)
-  - Implement offline capability
-  - Add push notifications
-  - Create telehealth video integration
-  - Add wearable device integration
-  - Implement biometric authentication
-  - Add location-based services
-- **Deliverables**: Mobile apps, telehealth platform, wearable integration
-- **Success Metrics**: Increased mobile usage, improved patient engagement
+
 
 ## Technical Architecture Enhancements
 
