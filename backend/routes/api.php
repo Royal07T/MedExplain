@@ -18,6 +18,8 @@ use App\Http\Controllers\Api\V1\ClinicalDocumentationController;
 use App\Http\Controllers\Api\V1\ClinicalAIController;
 use App\Http\Controllers\Api\V1\ClinicalDecisionSupportController;
 use App\Http\Controllers\Api\V1\DocumentController;
+use App\Http\Controllers\Api\V1\FhirController;
+use App\Http\Controllers\Api\V1\TerminologyController;
 use App\Http\Controllers\Api\V1\EmergencyDepartmentController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\HealthQueryController;
@@ -416,6 +418,20 @@ Route::prefix('v1')->group(function (): void {
             // Virtual Health Assistant
             Route::post('assistant/symptom-check', [SymptomCheckerController::class, 'check'])
                 ->middleware('role:patient', 'throttle:api');
+
+            // Interoperability — Medical Terminology (ICD-10 / SNOMED CT)
+            Route::prefix('terminology')->group(function (): void {
+                Route::get('systems', [TerminologyController::class, 'systems']);
+                Route::get('search', [TerminologyController::class, 'search']);
+                Route::post('validate', [TerminologyController::class, 'check']);
+            });
+
+            // Interoperability — FHIR R4 read endpoints
+            Route::prefix('fhir')->group(function (): void {
+                Route::get('metadata', [FhirController::class, 'metadata']);
+                Route::get('Patient/{id}', [FhirController::class, 'patient']);
+                Route::get('Organization/{id}', [FhirController::class, 'organization']);
+            });
         });
 
         // ─── Doctor workspace (legacy — moved inside auth) ──

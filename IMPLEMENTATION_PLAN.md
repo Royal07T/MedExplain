@@ -278,15 +278,16 @@ This document outlines the strategic roadmap to transform MedExplain from a basi
 - **Current**: Basic API structure
 - **Target**: Full healthcare interoperability
 - **Tasks**:
-  - Implement FHIR R4 endpoints
+  - ✅ (partial) Implement FHIR R4 read endpoints (Patient / Organization / metadata)
   - Add HL7 message processing
   - Create NHS Spine integration
-  - Implement ICD-10/11 coding system
-  - Add SNOMED CT terminology
+  - ✅ Implement ICD-10/11 coding system (lookup + validation)
+  - ✅ Add SNOMED CT terminology (lookup + validation)
   - Create API developer portal
   - Implement webhook system for integrations
 - **Deliverables**: FHIR implementation, HL7 integration, developer portal
 - **Success Metrics**: Successful integration with external systems, improved data exchange
+- **Notes (implemented 2026-08, chosen scope: terminology + FHIR read)**: Backend-only additions under the shared authenticated `api/v1` group. **Terminology**: `App\Services\Terminology\TerminologyService` + `TerminologyCodes` (deterministic offline ICD-10-CM + SNOMED CT reference vocabulary, expandable arrays) with `TerminologyController` — `GET /api/v1/terminology/systems`, `GET /api/v1/terminology/search?system=&q=`, `POST /api/v1/terminology/validate` (code + optional display consistency check). Useful for improving the quality of free-form `ProblemList.icd10_code` / `ImagingOrder.icd_code` fields. **FHIR R4 read**: `App\Services\Fhir\FhirResourceService` (spec-shaped Patient / Organization / CapabilityStatement mappers) + `FhirController` — `GET /api/v1/fhir/metadata`, `GET /api/v1/fhir/Patient/{id}`, `GET /api/v1/fhir/Organization/{id}`, returning raw `application/fhir+json` resources (not the app `success`/`data` envelope), organization-scoped with `OperationOutcome` 404s. Also fixed a latent `Patient` model cast bug (`organization_id => Organization::class` was being treated as a custom cast class, blocking all writes to `patients`; corrected to `integer`). Tests in `Phase61InteroperabilitySmokeTest` (10). HL7 v2 ingest, NHS Spine, full FHIR CRUD/Search, API developer portal, and webhook delivery remain future work.
 
 #### 6.2 Population Health
 - **Current**: None

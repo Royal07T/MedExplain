@@ -45,7 +45,7 @@ class Patient extends Model
     {
         return [
             'date_of_birth' => 'date',
-            'organization_id' => \App\Models\Organization::class,
+            'organization_id' => 'integer',
         ];
     }
 
